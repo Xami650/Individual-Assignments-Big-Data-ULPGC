@@ -3,7 +3,7 @@
 Common command-line contract shared with the Java and C drivers:
 
     python3 -u python/main.py --n N [--a PATH] [--b PATH] [--warmup W] [--reps R]
-                              [--min-sample-seconds S] [--out PATH]
+                              [--min-sample-seconds S] [--min-warmup-seconds SW] [--out PATH]
 
 Inputs default to data/inputs/A_<n>.bin and data/inputs/B_<n>.bin. Output on
 stdout is CSV with the header
@@ -15,7 +15,9 @@ back-to-back multiplications with a monotonic clock (kernel only: loading and
 allocation are outside the timed region). The first warm-up uses batch = 1;
 every later sample uses k = max(1, ceil(S / t)), with t the per-multiplication
 time of the most recent warm-up. checksum is the sum of all entries of C,
-printed with enough digits to round-trip the double.
+printed with enough digits to round-trip the double. When W >= 1, warm-up
+samples continue beyond W until at least SW seconds of warm-up work have run,
+so that the CPU has left its low-frequency ramp before measurement.
 With --out, C is written as raw little-endian float64 after the last sample.
 """
 
@@ -38,9 +40,10 @@ def parse_args():
     p.add_argument("--warmup", type=int, default=1)
     p.add_argument("--reps", type=int, default=5)
     p.add_argument("--min-sample-seconds", type=float, default=0.1)
+    p.add_argument("--min-warmup-seconds", type=float, default=1.0)
     p.add_argument("--out", type=Path)
     args = p.parse_args()
-    if args.n < 1 or args.warmup < 0 or args.reps < 0 or args.warmup + args.reps < 1:
+    if args.n < 1 or args.warmup < 0 or args.reps < 0 or args.warmup + args.reps < 1 or args.min_warmup_seconds < 0:
         p.error("need n >= 1 and at least one warm-up or measured sample")
     args.a = args.a or INPUTS / f"A_{args.n}.bin"
     args.b = args.b or INPUTS / f"B_{args.n}.bin"
@@ -62,11 +65,13 @@ def main():
     c = zeros(n)
 
     print("kind,index,batch,elapsed_ns,checksum", flush=True)
-    batch = 1
-    for i in range(args.warmup):
+    batch, i, warmup_ns = 1, 0, 0
+    while i < args.warmup or (args.warmup > 0 and warmup_ns < args.min_warmup_seconds * 1e9):
         elapsed = run_sample(a, b, c, n, batch)
         print(f"warmup,{i},{batch},{elapsed},{checksum(c)!r}", flush=True)
+        warmup_ns += elapsed
         batch = max(1, math.ceil(args.min_sample_seconds * 1e9 * batch / max(elapsed, 1)))
+        i += 1
 
     for i in range(args.reps):
         elapsed = run_sample(a, b, c, n, batch)

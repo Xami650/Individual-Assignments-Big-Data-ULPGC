@@ -145,7 +145,7 @@ static void test_cli_contract(const char *dir) {
     mm_write(a_path, a, 2);
     mm_write(b_path, b, 2);
     snprintf(cmd, sizeof cmd, "./build/matmul --n 2 --a %s --b %s --warmup 2 --reps 3 "
-             "--min-sample-seconds 0.001 --out %s", a_path, b_path, out_path);
+             "--min-sample-seconds 0.001 --min-warmup-seconds 0 --out %s", a_path, b_path, out_path);
 
     FILE *p = popen(cmd, "r");
     CHECK(p != NULL);
@@ -181,6 +181,26 @@ static void test_cli_contract(const char *dir) {
     double *c = mm_load(out_path, 2);
     CHECK(c != NULL && equal(c, expected, 2));
     free(c);
+
+    /* --min-warmup-seconds keeps warming up beyond --warmup until enough work has run. */
+    snprintf(cmd, sizeof cmd, "./build/matmul --n 2 --a %s --b %s --warmup 1 --reps 1 "
+             "--min-sample-seconds 0.01 --min-warmup-seconds 0.05", a_path, b_path);
+    p = popen(cmd, "r");
+    CHECK(p != NULL);
+    if (!p) return;
+    int warmups = 0;
+    long long warmup_ns = 0;
+    while (fgets(line, sizeof line, p)) {
+        long index, batch;
+        long long elapsed;
+        if (sscanf(line, "warmup,%ld,%ld,%lld,", &index, &batch, &elapsed) == 3) {
+            warmups++;
+            warmup_ns += elapsed;
+        }
+    }
+    CHECK(pclose(p) == 0);
+    CHECK(warmups >= 2);
+    CHECK(warmup_ns >= 50000000LL);
 }
 
 int main(void) {

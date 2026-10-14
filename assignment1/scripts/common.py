@@ -34,7 +34,8 @@ def build(config, languages=LANGUAGES):
         subprocess.run(["mvn", "-q", "-f", "java/pom.xml", "-DskipTests", "package"], cwd=ROOT, check=True)
 
 
-def command(config, language, n, *, warmup, reps, min_sample_seconds=None, a=None, b=None, out=None):
+def command(config, language, n, *, warmup, reps, min_sample_seconds=None, min_warmup_seconds=None,
+            a=None, b=None, out=None):
     """Command line (run from ROOT) for one process of the given implementation."""
     runtime = config["build_and_runtime"]
     if language == "c":
@@ -48,6 +49,8 @@ def command(config, language, n, *, warmup, reps, min_sample_seconds=None, a=Non
     cmd += ["--n", str(n), "--warmup", str(warmup), "--reps", str(reps)]
     if min_sample_seconds is not None:
         cmd += ["--min-sample-seconds", str(min_sample_seconds)]
+    if min_warmup_seconds is not None:
+        cmd += ["--min-warmup-seconds", str(min_warmup_seconds)]
     for flag, path in (("--a", a), ("--b", b), ("--out", out)):
         if path is not None:
             cmd += [flag, str(path)]

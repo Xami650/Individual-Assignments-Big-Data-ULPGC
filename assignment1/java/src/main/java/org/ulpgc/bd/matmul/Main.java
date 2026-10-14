@@ -10,7 +10,7 @@ import java.nio.file.Path;
  * <p>Common command-line contract shared with the Python and C drivers:
  * <pre>
  *   java -Xmx4g -jar java/target/matmul.jar --n N [--a PATH] [--b PATH] [--warmup W]
- *        [--reps R] [--min-sample-seconds S] [--out PATH]
+ *        [--reps R] [--min-sample-seconds S] [--min-warmup-seconds SW] [--out PATH]
  * </pre>
  * Inputs default to data/inputs/A_&lt;n&gt;.bin and B_&lt;n&gt;.bin relative to the working
  * directory (run from assignment1/). Output on stdout is CSV with the header
@@ -20,6 +20,8 @@ import java.nio.file.Path;
  * batch = 1 and every later sample uses k = max(1, ceil(S / t)), with t the
  * per-multiplication time of the most recent warm-up. The checksum is the sum
  * of all entries of C, printed with {@link Double#toString(double)}, which round-trips.
+ * When W &gt;= 1, warm-up samples continue beyond W until at least SW seconds of
+ * warm-up work have run, so that the CPU has left its low-frequency ramp.
  * With --out, C is written as raw little-endian float64 after the last sample.
  */
 public final class Main {
@@ -27,7 +29,8 @@ public final class Main {
     private Main() {
     }
 
-    record Options(int n, Path a, Path b, int warmup, int reps, double minSampleSeconds, Path out) {
+    record Options(int n, Path a, Path b, int warmup, int reps, double minSampleSeconds,
+                   double minWarmupSeconds, Path out) {
     }
 
     public static void main(String[] args) throws IOException {
@@ -37,7 +40,7 @@ public final class Main {
         } catch (IllegalArgumentException e) {
             System.err.println("error: " + e.getMessage());
             System.err.println("usage: --n N [--a PATH] [--b PATH] [--warmup W] [--reps R] "
-                    + "[--min-sample-seconds S] [--out PATH]");
+                    + "[--min-sample-seconds S] [--min-warmup-seconds SW] [--out PATH]");
             System.exit(2);
             return;
         }
@@ -48,7 +51,7 @@ public final class Main {
         Integer n = null;
         Path a = null, b = null, out = null;
         int warmup = 2, reps = 5;
-        double minSample = 0.1;
+        double minSample = 0.1, minWarmup = 1.0;
         for (int i = 0; i < args.length; i += 2) {
             if (i + 1 >= args.length) {
                 throw new IllegalArgumentException("missing value for " + args[i]);
@@ -61,18 +64,19 @@ public final class Main {
                 case "--warmup" -> warmup = Integer.parseInt(v);
                 case "--reps" -> reps = Integer.parseInt(v);
                 case "--min-sample-seconds" -> minSample = Double.parseDouble(v);
+                case "--min-warmup-seconds" -> minWarmup = Double.parseDouble(v);
                 case "--out" -> out = Path.of(v);
                 default -> throw new IllegalArgumentException("unknown option " + args[i]);
             }
         }
-        if (n == null || n < 1 || warmup < 0 || reps < 0 || warmup + reps < 1) {
+        if (n == null || n < 1 || warmup < 0 || reps < 0 || warmup + reps < 1 || minWarmup < 0) {
             throw new IllegalArgumentException("need --n >= 1 and at least one warm-up or measured sample");
         }
         Path inputs = Path.of("data", "inputs");
         return new Options(n,
                 a != null ? a : inputs.resolve("A_" + n + ".bin"),
                 b != null ? b : inputs.resolve("B_" + n + ".bin"),
-                warmup, reps, minSample, out);
+                warmup, reps, minSample, minWarmup, out);
     }
 
     static void run(Options opt, PrintStream out) throws IOException {
@@ -84,10 +88,12 @@ public final class Main {
         out.println("kind,index,batch,elapsed_ns,checksum");
         out.flush();
         int batch = 1;
-        for (int i = 0; i < opt.warmup(); i++) {
+        long warmupNs = 0;
+        for (int i = 0; i < opt.warmup() || (opt.warmup() > 0 && warmupNs < opt.minWarmupSeconds() * 1e9); i++) {
             long elapsed = runSample(a, b, c, n, batch);
             out.println("warmup," + i + "," + batch + "," + elapsed + "," + MatMul.checksum(c));
             out.flush();
+            warmupNs += elapsed;
             batch = (int) Math.max(1, Math.ceil(opt.minSampleSeconds() * 1e9 * batch / Math.max(elapsed, 1)));
         }
 

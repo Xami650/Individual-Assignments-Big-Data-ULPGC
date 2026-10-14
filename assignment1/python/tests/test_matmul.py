@@ -103,7 +103,8 @@ def test_cli_output_contract(tmp_path):
     out = tmp_path / "c.bin"
     result = subprocess.run(
         [sys.executable, str(MAIN), "--n", "2", "--a", str(tmp_path / "a.bin"), "--b", str(tmp_path / "b.bin"),
-         "--warmup", "2", "--reps", "3", "--min-sample-seconds", "0.001", "--out", str(out)],
+         "--warmup", "2", "--reps", "3", "--min-sample-seconds", "0.001", "--min-warmup-seconds", "0",
+         "--out", str(out)],
         capture_output=True, text=True, check=True)
     rows = list(csv.DictReader(result.stdout.splitlines()))
     assert [r["kind"] for r in rows] == ["warmup"] * 2 + ["measure"] * 3
@@ -112,3 +113,15 @@ def test_cli_output_contract(tmp_path):
     assert len({r["batch"] for r in rows if r["kind"] == "measure"}) == 1
     assert all(float(r["checksum"]) == 134.0 for r in rows)
     assert load_matrix(out, 2) == [[19.0, 22.0], [43.0, 50.0]]
+
+
+def test_cli_min_warmup_extends_warmups(tmp_path):
+    write_matrix(tmp_path / "a.bin", [[1.0, 2.0], [3.0, 4.0]])
+    write_matrix(tmp_path / "b.bin", [[5.0, 6.0], [7.0, 8.0]])
+    result = subprocess.run(
+        [sys.executable, str(MAIN), "--n", "2", "--a", str(tmp_path / "a.bin"), "--b", str(tmp_path / "b.bin"),
+         "--warmup", "1", "--reps", "1", "--min-sample-seconds", "0.01", "--min-warmup-seconds", "0.05"],
+        capture_output=True, text=True, check=True)
+    warmups = [r for r in csv.DictReader(result.stdout.splitlines()) if r["kind"] == "warmup"]
+    assert len(warmups) >= 2
+    assert sum(int(r["elapsed_ns"]) for r in warmups) >= 0.05e9

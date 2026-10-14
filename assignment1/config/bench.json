@@ -53,7 +53,11 @@
     },
     "result_consumption": "after each sample the program prints a checksum (sum of all C entries) so the computation cannot be eliminated",
     "process_model": "one fresh process per (language, n); it runs the warm-up samples and then the measured samples on the same input",
+    "run_order": "n ascending, starting with the memory baseline n; for each n the languages run in the order c, java, python",
+    "pause_between_runs_seconds": 2,
     "warmup_runs": { "python": 1, "java": 2, "c": 1 },
+    "min_warmup_seconds": 1.0,
+    "warmup_rule": "warmup_runs is a minimum: warm-up samples continue until at least min_warmup_seconds of warm-up work have run. A smoke test showed the first 0.2-0.3 s of a process running slower (C, n = 128: 1.42, 0.93, then a steady 0.84 ms per multiplication), consistent with the CPU frequency/core ramp of macOS. When one multiplication takes longer than min_warmup_seconds this rule adds nothing. All warm-up samples are kept in the raw data and excluded from the summaries.",
     "measured_repetitions": 5,
     "batching": {
       "min_sample_seconds": 0.1,

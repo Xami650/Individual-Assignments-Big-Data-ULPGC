@@ -152,7 +152,7 @@ class MatMulTest {
         Path out = tmp.resolve("c.bin");
         Main.Options opt = Main.parse(new String[]{"--n", "2", "--a", tmp.resolve("a.bin").toString(),
                 "--b", tmp.resolve("b.bin").toString(), "--warmup", "2", "--reps", "3",
-                "--min-sample-seconds", "0.001", "--out", out.toString()});
+                "--min-sample-seconds", "0.001", "--min-warmup-seconds", "0", "--out", out.toString()});
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         Main.run(opt, new PrintStream(bytes, true, StandardCharsets.UTF_8));
 
@@ -168,6 +168,21 @@ class MatMulTest {
         assertEquals("1", lines.get(1).split(",")[2]);
         assertEquals(1, lines.stream().skip(3).map(l -> l.split(",")[2]).distinct().count());
         assertMatrixEquals(new double[][]{{19, 22}, {43, 50}}, MatMul.load(out, 2));
+    }
+
+    @Test
+    void cliMinWarmupExtendsWarmups(@TempDir Path tmp) throws IOException {
+        MatMul.write(tmp.resolve("a.bin"), new double[][]{{1, 2}, {3, 4}});
+        MatMul.write(tmp.resolve("b.bin"), new double[][]{{5, 6}, {7, 8}});
+        Main.Options opt = Main.parse(new String[]{"--n", "2", "--a", tmp.resolve("a.bin").toString(),
+                "--b", tmp.resolve("b.bin").toString(), "--warmup", "1", "--reps", "1",
+                "--min-sample-seconds", "0.01", "--min-warmup-seconds", "0.05"});
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        Main.run(opt, new PrintStream(bytes, true, StandardCharsets.UTF_8));
+        List<String[]> warmups = bytes.toString(StandardCharsets.UTF_8).lines()
+                .map(l -> l.split(",")).filter(f -> f[0].equals("warmup")).toList();
+        assertTrue(warmups.size() >= 2, "warm-up samples: " + warmups.size());
+        assertTrue(warmups.stream().mapToLong(f -> Long.parseLong(f[3])).sum() >= 50_000_000L);
     }
 
     @Test
