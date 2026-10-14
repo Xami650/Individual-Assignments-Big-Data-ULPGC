@@ -1,0 +1,16 @@
+\begin{tabular}{rrrr}
+\toprule
+$n$ & C & Java & Python \\
+\midrule
+64 & 0.0759 (0.7\%) & 0.0929 (0.2\%) & 4.71 (0.4\%) \\
+128 & 0.876 (1.4\%) & 0.905 (0.3\%) & 40.3 (1.0\%) \\
+256 & 9.84 (0.2\%) & 8.36 (0.5\%) & 340 (4.8\%) \\
+384 & 30.7 (0.4\%) & 31.4 (1.7\%) & 1372 (0.8\%) \\
+512 & 101 (0.3\%) & 77.8 (0.4\%) & 3562 ($<$0.1\%) \\
+768 & 274 (1.1\%) & 298 (0.8\%) & 13057 (0.4\%) \\
+1024 & 861 (1.1\%) & 954 (0.6\%) & 35117 (5.1\%) \\
+1536 & 3224 (0.6\%) & 4067 (1.4\%) & timeout\textsuperscript{a} \\
+2048 & 19095 (2.8\%) & 12900 (0.2\%) & skipped\textsuperscript{b} \\
+\bottomrule
+\end{tabular}
+\par\smallskip{\footnotesize \textsuperscript{a} first multiplication exceeded the 120\,s budget and was stopped. \textsuperscript{b} not attempted after the timeout at a smaller size.}

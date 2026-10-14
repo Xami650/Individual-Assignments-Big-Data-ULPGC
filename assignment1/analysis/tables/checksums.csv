@@ -1,0 +1,11 @@
+n,languages,distinct_values,identical,checksum_hex
+1,c java python,1,True,-0x1.01a669c069e44p-6
+64,c java python,1,True,-0x1.17b3d173e049ap+7
+128,c java python,1,True,0x1.6a8e78f34ecb9p+8
+256,c java python,1,True,0x1.687f6b62acda5p+10
+384,c java python,1,True,-0x1.e09eff58f5913p+11
+512,c java python,1,True,-0x1.949b35a2e597bp+12
+768,c java python,1,True,0x1.4e679731bf3f0p+13
+1024,c java python,1,True,-0x1.842cb95028424p+13
+1536,c java,1,True,0x1.9e12b3123a72ap+14
+2048,c java,1,True,-0x1.2adc6c57cb92dp+15
