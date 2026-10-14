@@ -1,0 +1,106 @@
+{
+  "_about": "Experimental protocol for Assignment 1, declared before any benchmark run. The scripts in ../scripts read this file; it is the single source of truth for sizes, repetitions, budgets and build/runtime flags.",
+
+  "study": {
+    "research_question": "How does matrix size n affect the runtime and peak memory of the same basic triple-loop dense matrix multiplication implemented in Python, Java and C on one fixed machine?",
+    "factor": "matrix side length n (square n x n inputs)",
+    "outcomes": ["kernel wall-clock time per multiplication", "peak resident set size of the process"],
+    "hypotheses": [
+      "H1: runtime grows approximately as n^3 for every implementation (log-log slope close to 3); C and Java may exceed 3 at the larger sizes because the column-wise walk over B increasingly misses in cache and TLB.",
+      "H2: at every tested size, CPython is one to two orders of magnitude slower than C and Java, while C and Java stay within a small constant factor of each other once the JVM has compiled the kernel.",
+      "H3: peak memory grows approximately as n^2; C stays close to the 24 n^2 bytes of its three arrays, Java adds a roughly constant JVM overhead, and Python needs several times more per element because list-of-lists stores pointers to boxed float objects.",
+      "H4: the three implementations produce bitwise-identical results, because they perform the same IEEE-754 double operations in the same order (no FMA contraction, no reassociation)."
+    ]
+  },
+
+  "algorithm": {
+    "name": "basic triple loop",
+    "loop_order": "i-j-k",
+    "accumulation": "scalar accumulator s = 0.0; for k in 0..n-1: s = s + A[i][k] * B[k][j]; C[i][j] = s",
+    "arithmetic_work": "n^3 multiplications and n^3 additions",
+    "numeric_type": "IEEE-754 binary64 (double / float64)",
+    "threads": 1,
+    "storage": {
+      "python": "list of lists of Python float objects (row-major, one list per row)",
+      "java": "double[][] (array of row arrays, each row contiguous)",
+      "c": "single contiguous row-major double array allocated with malloc, indexed as M[i*n + j]"
+    }
+  },
+
+  "inputs": {
+    "generator": "numpy.random.Generator(PCG64(SeedSequence([seed, n])))",
+    "seed": 2026,
+    "distribution": "uniform on [-1.0, 1.0)",
+    "draw_order": "A first (n*n values, row-major), then B (n*n values, row-major)",
+    "file_format": "raw little-endian float64, row-major, no header; n is given on the command line and checked against the file size",
+    "files": "data/inputs/A_<n>.bin and data/inputs/B_<n>.bin",
+    "checksums": "data/checksums.sha256"
+  },
+
+  "sizes": {
+    "correctness": [1, 2, 3, 10, 64, 100, 256],
+    "benchmark": [64, 128, 256, 384, 512, 768, 1024, 1536, 2048],
+    "memory_baseline_n": 1,
+    "_notes": "Powers of two are interleaved with intermediate sizes (384, 768, 1536) so that cache-associativity effects specific to power-of-two strides can be told apart from the general trend. Sizes above 2048 are not attempted because of the session budget below."
+  },
+
+  "measurement": {
+    "timer_boundary": "kernel only: the triple loop. Input loading, output allocation and JVM/interpreter start-up are outside the timed region. The kernel assigns every C[i][j], so the output buffer needs no re-initialisation between repetitions.",
+    "clocks": {
+      "python": "time.perf_counter_ns()",
+      "java": "System.nanoTime()",
+      "c": "clock_gettime(CLOCK_MONOTONIC_RAW)"
+    },
+    "result_consumption": "after each sample the program prints a checksum (sum of all C entries) so the computation cannot be eliminated",
+    "process_model": "one fresh process per (language, n); it runs the warm-up samples and then the measured samples on the same input",
+    "warmup_runs": { "python": 1, "java": 2, "c": 1 },
+    "measured_repetitions": 5,
+    "batching": {
+      "min_sample_seconds": 0.1,
+      "rule": "the batch size k (multiplications per sample) is calibrated from the last warm-up: k = max(1, ceil(min_sample_seconds / t_warmup)). Each sample times k back-to-back multiplications and reports time / k. k is recorded with every sample."
+    },
+    "summary": "median and interquartile range (IQR) of the measured samples; every raw sample is kept"
+  },
+
+  "budgets": {
+    "max_seconds_per_multiplication": 120,
+    "startup_slack_seconds": 20,
+    "max_peak_rss_bytes": 4000000000,
+    "max_session_minutes": 60,
+    "policy": "The harness kills a process if no sample is reported within max_seconds_per_multiplication (+ startup slack for the first one), records the configuration as a timeout with the limit, and skips larger n for that language. The memory budget is checked after the run against peak RSS (macOS does not enforce RSS limits); the JVM heap is additionally capped by -Xmx. Timeouts and memory failures are reported as results, never given an invented time."
+  },
+
+  "memory": {
+    "metric": "peak resident set size (maximum resident set size) of the whole process",
+    "tool": "/usr/bin/time -l (macOS), identical for the three languages",
+    "theoretical_reference": "24 n^2 bytes = three n x n float64 arrays (element storage only)",
+    "limitations": "Peak RSS covers the whole process lifetime (runtime, input loading, warm-up and measured samples). It is not the same as JVM heap use or Python object counts, and it includes the runtime itself, so the n = 1 baseline is reported alongside."
+  },
+
+  "correctness": {
+    "unit_tests": "identity, zero, and hand-computed 2x2 / 3x3 cases in each language's test suite",
+    "reference": "numpy.matmul in float64 (BLAS-backed), used only for checking",
+    "criterion": "|C_ij - R_ij| <= atol + rtol * (|A||B|)_ij for every i, j",
+    "rtol": "2 * gamma_n, with gamma_n = n*u / (1 - n*u) and u = 2^-53",
+    "atol": 0.0,
+    "justification": "Any summation order of an n-term dot product has forward error at most gamma_n * (|A||B|)_ij (Higham, Accuracy and Stability of Numerical Algorithms, 2nd ed., Secs. 3.1 and 3.5), so two correct results differ by at most 2 gamma_n (|A||B|)_ij. The bound is scaled by |A||B| rather than |C| because entries of C can be close to zero through cancellation, which makes a |C|-relative tolerance meaningless; it also covers exact zeros, so no absolute floor is needed (atol = 0). The cross-language comparison additionally expects bitwise equality (H4)."
+  },
+
+  "build_and_runtime": {
+    "c": {
+      "compiler": "clang (Apple)",
+      "cflags": ["-std=c17", "-O2", "-ffp-contract=off", "-Wall", "-Wextra"],
+      "_notes": "-O2 is the fixed optimisation level. -ffp-contract=off stops clang from fusing s + a*b into an FMA (its default on arm64), keeping the same rounding as Java and CPython. No -ffast-math and no -march flags, so the reduction over k is not reassociated or vectorised."
+    },
+    "java": {
+      "jdk": "OpenJDK 25 (HotSpot, tiered JIT)",
+      "jvm_flags": ["-Xmx4g"],
+      "_notes": "Default garbage collector (G1) and default tiered compilation. Warm-up samples let the JIT compile the kernel before measurement."
+    },
+    "python": {
+      "implementation": "CPython 3.13 (Anaconda distribution), default build: no JIT, GIL enabled",
+      "interpreter_flags": ["-u"],
+      "_notes": "The implementation uses only the standard library (array module for loading); NumPy is used only to generate inputs and as the correctness reference, so it is not loaded in benchmark processes."
+    }
+  }
+}

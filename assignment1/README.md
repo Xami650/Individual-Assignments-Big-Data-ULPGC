@@ -23,6 +23,15 @@ assignment1/
 └── report/     LaTeX source of the research report and final PDF
 ```
 
+## Experimental protocol
+
+The protocol was declared before running any benchmark in
+[`config/bench.json`](config/bench.json): research question and hypotheses,
+algorithm and storage layouts, seeded inputs, matrix sizes, timer boundary,
+warm-up and repetition counts, time/memory budgets, correctness tolerance, and
+the fixed compiler, JVM and Python settings. The scripts read that file, so it is
+the single source of truth for every run.
+
 ## Note on the project structure
 
 The three language implementations live side by side in one project, inside a
