@@ -1,0 +1,11 @@
+# Generated input matrices: regenerate with scripts/gen_inputs.py (checksums are tracked)
+data/inputs/*.bin
+
+# Build outputs
+c/build/
+java/target/
+__pycache__/
+.pytest_cache/
+
+# Scratch outputs of correctness runs
+results/tmp/
