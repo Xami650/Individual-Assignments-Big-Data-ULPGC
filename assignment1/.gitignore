@@ -9,3 +9,6 @@ __pycache__/
 
 # Scratch outputs of correctness runs
 results/tmp/
+
+# Smoke-test benchmark sessions
+results/raw/smoke*/

@@ -71,7 +71,7 @@
     "startup_slack_seconds": 20,
     "max_peak_rss_bytes": 4000000000,
     "max_session_minutes": 60,
-    "policy": "The harness kills a process if no sample is reported within max_seconds_per_multiplication (+ startup slack for the first one), records the configuration as a timeout with the limit, and skips larger n for that language. The memory budget is checked after the run against peak RSS (macOS does not enforce RSS limits); the JVM heap is additionally capped by -Xmx. Timeouts and memory failures are reported as results, never given an invented time."
+    "policy": "Each process gets startup_slack_seconds to load its inputs and print its CSV header, then max_seconds_per_multiplication for every sample (batched samples last about min_sample_seconds by construction). The harness kills a process that misses a deadline, records the configuration as a timeout with the limit, and skips larger n for that language. The memory budget is checked after the run against peak RSS (macOS does not enforce RSS limits); the JVM heap is additionally capped by -Xmx. Timeouts and memory failures are reported as results, never given an invented time."
   },
 
   "memory": {
