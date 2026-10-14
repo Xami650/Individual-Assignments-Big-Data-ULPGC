@@ -12,9 +12,10 @@ stdout is CSV with the header
 
 and one row per sample. kind is "warmup" or "measure". Each sample times `batch`
 back-to-back multiplications with a monotonic clock (kernel only: loading and
-allocation are outside the timed region). Warm-up samples use batch = 1; the
-measured batch is k = max(1, ceil(S / t_last_warmup)). checksum is the sum of
-all entries of C, printed with enough digits to round-trip the double.
+allocation are outside the timed region). The first warm-up uses batch = 1;
+every later sample uses k = max(1, ceil(S / t)), with t the per-multiplication
+time of the most recent warm-up. checksum is the sum of all entries of C,
+printed with enough digits to round-trip the double.
 With --out, C is written as raw little-endian float64 after the last sample.
 """
 
@@ -61,14 +62,12 @@ def main():
     c = zeros(n)
 
     print("kind,index,batch,elapsed_ns,checksum", flush=True)
-    last_warmup_ns = None
-    for i in range(args.warmup):
-        last_warmup_ns = run_sample(a, b, c, n, 1)
-        print(f"warmup,{i},1,{last_warmup_ns},{checksum(c)!r}", flush=True)
-
     batch = 1
-    if last_warmup_ns:
-        batch = max(1, math.ceil(args.min_sample_seconds * 1e9 / last_warmup_ns))
+    for i in range(args.warmup):
+        elapsed = run_sample(a, b, c, n, batch)
+        print(f"warmup,{i},{batch},{elapsed},{checksum(c)!r}", flush=True)
+        batch = max(1, math.ceil(args.min_sample_seconds * 1e9 * batch / max(elapsed, 1)))
+
     for i in range(args.reps):
         elapsed = run_sample(a, b, c, n, batch)
         print(f"measure,{i},{batch},{elapsed},{checksum(c)!r}", flush=True)

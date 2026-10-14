@@ -57,7 +57,7 @@
     "measured_repetitions": 5,
     "batching": {
       "min_sample_seconds": 0.1,
-      "rule": "the batch size k (multiplications per sample) is calibrated from the last warm-up: k = max(1, ceil(min_sample_seconds / t_warmup)). Each sample times k back-to-back multiplications and reports time / k. k is recorded with every sample."
+      "rule": "Each sample times k back-to-back multiplications (k is recorded with every sample; time per multiplication = elapsed / k). The first warm-up uses k = 1; every later sample uses k = max(1, ceil(min_sample_seconds / t)), where t is the per-multiplication time of the most recent warm-up. Re-calibrating on every warm-up gives a JIT at least ~min_sample_seconds of warm-up work even when the first, interpreted run is several times slower than compiled code. All measured samples of a configuration share the same k."
     },
     "summary": "median and interquartile range (IQR) of the measured samples; every raw sample is kept"
   },

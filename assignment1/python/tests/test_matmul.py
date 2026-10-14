@@ -107,7 +107,8 @@ def test_cli_output_contract(tmp_path):
         capture_output=True, text=True, check=True)
     rows = list(csv.DictReader(result.stdout.splitlines()))
     assert [r["kind"] for r in rows] == ["warmup"] * 2 + ["measure"] * 3
-    assert all(r["batch"] == "1" for r in rows[:2])
+    assert rows[0]["batch"] == "1"
     assert all(int(r["batch"]) >= 1 and int(r["elapsed_ns"]) > 0 for r in rows)
+    assert len({r["batch"] for r in rows if r["kind"] == "measure"}) == 1
     assert all(float(r["checksum"]) == 134.0 for r in rows)
     assert load_matrix(out, 2) == [[19.0, 22.0], [43.0, 50.0]]
