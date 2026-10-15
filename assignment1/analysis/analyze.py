@@ -234,7 +234,8 @@ def plain_log_ticks(ax, ticks):
 
 
 def save(fig, name):
-    fig.savefig(FIGURES / f"{name}.pdf")
+    # No creation timestamp, so re-running the analysis reproduces the files byte for byte.
+    fig.savefig(FIGURES / f"{name}.pdf", metadata={"CreationDate": None})
     fig.savefig(FIGURES / f"{name}.png")
     plt.close(fig)
 
