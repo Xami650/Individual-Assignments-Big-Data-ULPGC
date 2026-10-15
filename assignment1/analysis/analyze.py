@@ -95,6 +95,7 @@ def summarise(samples, runs, benchmark_sizes):
     summary["instructions_per_inner_iteration"] = summary.instructions_retired / iterations
     summary["cycles_per_inner_iteration"] = summary.cycles_elapsed / iterations
     summary["kernel_share_of_user_time"] = summary.kernel_seconds / summary.process_user_s
+    summary["cycles_per_user_second"] = summary.cycles_elapsed / summary.process_user_s
     summary["benchmark_size"] = summary.n.isin(benchmark_sizes)
     return summary.sort_values(["language", "n"]).reset_index(drop=True)
 
@@ -207,7 +208,7 @@ def tables(summary, local, fits, budget_s):
             hit = local[(local.language == lang) & (local.n_from == n_from) & (local.n_to == n_to)]
             cells.append(f"{hit.exponent.iloc[0]:.2f}" if len(hit) else "--")
         rows.append(cells)
-    rows.append([r"\midrule global fit"] + [f"{fits[lang]['slope']:.2f} ({fits[lang]['sizes']})" for lang in LANGS])
+    rows.append([r"\midrule global fit"] + [f"{fits[lang]['slope']:.2f} ({fits[lang]['sizes'].replace('-', '--')})" for lang in LANGS])
     write_table("tab_growth.tex", ["sizes", "C", "Java", "Python"], rows, "lrrr")
 
     rows = []
@@ -380,6 +381,10 @@ def main():
     print(f"session {session.name}: {len(samples)} samples, {len(runs)} runs")
     print("checksums identical across languages at every n:", bool(checks.identical.all()))
     print("global log-log slopes:", {k: round(v["slope"], 3) for k, v in fits.items()})
+    ok = summary[summary.status == "ok"]
+    print(f"kernel share of user CPU time: {ok.kernel_share_of_user_time.min():.3f}-"
+          f"{ok.kernel_share_of_user_time.max():.3f}; cycles per user second: "
+          f"{ok.cycles_per_user_second.min() / 1e9:.2f}-{ok.cycles_per_user_second.max() / 1e9:.2f} GHz")
     print(f"wrote {TABLES.relative_to(ROOT)}/ and {FIGURES.relative_to(ROOT)}/")
 
 
