@@ -1,6 +1,6 @@
 # Assignment 1 — Basic Matrix Multiplication in Python, Java and C
 
-BIG DATA · ULPGC · 2026-2027 — Máximo Prosperi Reynoso
+BIG DATA · GCID · ULPGC · 2026-2027 — Máximo Prosperi Reynoso
 
 Empirical comparison of the same straightforward triple-loop dense matrix
 multiplication (i-j-k order, scalar accumulator, IEEE-754 double, one thread, no

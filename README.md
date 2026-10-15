@@ -1,7 +1,6 @@
 # BIG DATA — Individual Assignments (2026-2027)
 
-Grado en Ciencia e Ingeniería de Datos, Universidad de Las Palmas de Gran Canaria
-(ULPGC). Author: Máximo Prosperi Reynoso.
+GCID, ULPGC. Author: Máximo Prosperi Reynoso.
 
 Each assignment is self-contained in its own directory, with its own README,
 build instructions, data, analysis and report.
