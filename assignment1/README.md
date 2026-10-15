@@ -12,7 +12,7 @@ a common protocol that was declared before any benchmark was run.
 
 Session `20261014-225910`, Apple M4 MacBook Air. Median of five measured samples
 per configuration, plus the peak resident set size of the process. These numbers
-come from one machine and one session. The report discusses their variability,
+come from one machine and one session. The [report](report/main.pdf) discusses their variability,
 growth and limits.
 
 | n | C time | Java time | Python time | C peak RSS | Java peak RSS | Python peak RSS |
@@ -58,7 +58,7 @@ assignment1/
 │   ├── analyze.py         summary statistics, tables and figures
 │   ├── tables/            CSV summaries and LaTeX tables used by the report
 │   └── figures/           figures (PDF for the report, PNG for viewing)
-├── report/            LaTeX source of the research report and final PDF
+├── report/            main.tex (LaTeX source of the research report) and main.pdf
 └── requirements.txt   Python packages for the scripts, tests and analysis
 ```
 
@@ -159,6 +159,18 @@ python3 scripts/run_benchmarks.py --sizes 1 64 128 --reps 2 --session smoke    #
 python3 scripts/run_benchmarks.py --languages c java --sizes 256 512 --session smoke-cj
 python3 scripts/run_benchmarks.py --max-seconds 1 --sizes 512 1024 --session smoke-timeout
 python3 scripts/verify.py --sizes 1 2 3
+```
+
+## Building the report
+
+The report reads its tables and figures directly from `analysis/tables/` and
+`analysis/figures/`, so it always shows the output of the last analysis run. It
+was built with Tectonic 0.17.0, which downloads the LaTeX packages it needs on
+first use:
+
+```sh
+cd report
+tectonic -X compile main.tex            # writes report/main.pdf
 ```
 
 ## Running one implementation by hand
