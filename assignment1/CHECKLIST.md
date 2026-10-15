@@ -53,7 +53,7 @@ common pages) to where it is met. "§" refers to sections of the report
 |---|---|
 | Report structure: title and abstract, introduction, background, methodology, results, discussion, conclusions, references and materials | `report/main.tex`, §1–§7 |
 | English; labelled figures and tables; consistent IEEE references, each one checked | report; references [1]–[14] |
-| PDF with name, assignment number and research title | `Assignment01_ProsperiReynoso_Report.pdf` (copy of `report/main.pdf`) |
+| PDF with name, assignment number and research title | `Assignment01_MaximoProsperiReynoso_Report.pdf` (copy of `report/main.pdf`) |
 | Source code, README, dependencies, environment details, exact build and run commands | [`README.md`](README.md), `requirements.txt`, `java/pom.xml`, `c/Makefile` |
 | Raw results, input generation instructions, scripts reproducing the analysis and figures | `results/`, `scripts/gen_inputs.py`, `analysis/analyze.py` |
 | GitHub repository | https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC (tag `assignment1-v1.0`) |
