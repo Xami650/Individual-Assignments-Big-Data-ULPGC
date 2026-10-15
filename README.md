@@ -8,7 +8,7 @@ build instructions, data, analysis and report.
 
 | Assignment | Topic | Status |
 |---|---|---|
-| [assignment1](assignment1/) | Basic matrix multiplication in Python, Java and C | in progress |
+| [assignment1](assignment1/) | Basic matrix multiplication in Python, Java and C | submitted (tag `assignment1-v1.0`, [report](assignment1/report/main.pdf)) |
 | assignment2 | — | not started |
 | assignment3 | — | not started |
 | assignment4 | — | not started |
@@ -22,3 +22,7 @@ would normally be its own project. It is done only to keep the whole class
 submission together in one place. The root `pom.xml` lists
 `assignment1/java` as a module only for IDE convenience. That project has no
 parent POM and builds on its own (`mvn -f assignment1/java/pom.xml package`).
+
+## License
+
+MIT, see [LICENSE](LICENSE).

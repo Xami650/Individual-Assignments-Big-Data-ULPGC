@@ -59,6 +59,7 @@ assignment1/
 │   ├── tables/            CSV summaries and LaTeX tables used by the report
 │   └── figures/           figures (PDF for the report, PNG for viewing)
 ├── report/            main.tex (LaTeX source of the research report) and main.pdf
+├── CHECKLIST.md       each course requirement mapped to where it is met
 └── requirements.txt   Python packages for the scripts, tests and analysis
 ```
 

@@ -20,7 +20,7 @@
 
 \graphicspath{{../analysis/figures/}}
 \newcommand{\tabledir}{../analysis/tables}
-\newcommand{\repourl}{\textbf{[repository URL added at submission]}}
+\newcommand{\repourl}{\url{https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC}}
 \newcommand{\session}{\texttt{20261014-225910}}
 
 \lstset{
@@ -527,7 +527,8 @@ the runtime's own memory).}
 \subsection{Limits}
 
 The largest size that met the budget was $n=2048$ for C (19.1\,s per
-multiplication) and for Java (12.9\,s), and $n=1024$ for Python (35.1\,s). At
+multiplication) and for Java (12.9\,s), and $n=1024$ for Python (35.1\,s). The
+largest size attempted was $n=2048$ for C and Java and $n=1536$ for Python. At
 $n=1536$, Python's first warm-up multiplication did not finish within 120\,s, so
 the process was stopped and recorded as a timeout without any time, and $n=2048$
 was skipped for Python. No configuration came near the memory budget: the
@@ -678,7 +679,10 @@ along its rows, belong to Assignment~2.
 \label{sec:materials}
 
 \paragraph{Reproducibility materials.} All code, data and scripts are in the
-GitHub repository \repourl, in the directory \texttt{assignment1/}. Its README
+directory \texttt{assignment1/} of the GitHub repository below, at the tag
+\texttt{assignment1-v1.0}:
+\begin{center}\repourl\end{center}
+Its README
 gives the exact build and run commands and the software versions. The materials
 are:
 \begin{itemize}
