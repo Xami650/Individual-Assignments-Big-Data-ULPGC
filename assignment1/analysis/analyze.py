@@ -76,18 +76,25 @@ def summarise(samples, runs, benchmark_sizes):
         "batch": measured.groupby(["language", "n"]).batch.first(),
     })
     summary["warmup_samples"] = samples[samples.kind == "warmup"].groupby(["language", "n"]).size()
+    # Process-wide counters cover warm-ups too, so normalise them by every multiplication the process ran.
+    summary["multiplications"] = samples.groupby(["language", "n"]).batch.sum()
+    summary["kernel_seconds"] = samples.groupby(["language", "n"]).elapsed_ns.sum() / 1e9
     summary["iqr_ns"] = summary.q3_ns - summary.q1_ns
     summary["iqr_rel"] = summary.iqr_ns / summary.median_ns
 
     runs = runs.set_index(["language", "n"])
     summary = runs[["status", "detail", "max_rss_bytes", "peak_footprint_bytes", "instructions_retired",
-                    "cycles_elapsed"]].join(summary, how="left").reset_index()
+                    "cycles_elapsed", "process_user_s"]].join(summary, how="left").reset_index()
     summary["ns_per_inner_iteration"] = summary.median_ns / summary.n.astype(float) ** 3
     summary["theoretical_bytes"] = 24 * summary.n.astype(float) ** 2
     baseline = summary[summary.n == 1].set_index("language").max_rss_bytes
     summary["rss_above_baseline"] = summary.max_rss_bytes - summary.language.map(baseline)
     summary["bytes_per_element_above_baseline"] = summary.rss_above_baseline / (3 * summary.n.astype(float) ** 2)
     summary["ipc_process"] = summary.instructions_retired / summary.cycles_elapsed
+    iterations = summary.multiplications * summary.n.astype(float) ** 3
+    summary["instructions_per_inner_iteration"] = summary.instructions_retired / iterations
+    summary["cycles_per_inner_iteration"] = summary.cycles_elapsed / iterations
+    summary["kernel_share_of_user_time"] = summary.kernel_seconds / summary.process_user_s
     summary["benchmark_size"] = summary.n.isin(benchmark_sizes)
     return summary.sort_values(["language", "n"]).reset_index(drop=True)
 
@@ -206,11 +213,14 @@ def tables(summary, local, fits, budget_s):
     rows = []
     for n in sizes:
         cells = [str(n)]
-        for lang in LANGS:
-            r = by(summary, lang, n)
-            cells.append(f"{r.ipc_process:.2f}" if r.status == "ok" else "--")
+        for column in ("instructions_per_inner_iteration", "cycles_per_inner_iteration"):
+            for lang in LANGS:
+                r = by(summary, lang, n)
+                cells.append(sig(r[column]) if r.status == "ok" else "--")
         rows.append(cells)
-    write_table("tab_ipc.tex", ["$n$", "C", "Java", "Python"], rows, "rrrr")
+    group = (r" & \multicolumn{3}{c}{instructions per iteration} & \multicolumn{3}{c}{cycles per iteration} \\"
+             r" \cmidrule(lr){2-4} \cmidrule(lr){5-7} $n$")
+    write_table("tab_counters.tex", [group, *["C", "Java", "Python"] * 2], rows, "rrrrrrr")
 
 
 # ---------------------------------------------------------------- figures
