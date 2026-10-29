@@ -1,0 +1,28 @@
+n,structure,density_percent,methods,configurations,distinct_values,identical
+64,dense,100.0,basic blocked ikj,3,1,True
+128,dense,100.0,basic blocked ikj,3,1,True
+256,dense,100.0,basic blocked ikj,3,1,True
+384,dense,100.0,basic blocked ikj,3,1,True
+512,dense,100.0,basic blocked ikj,3,1,True
+768,dense,100.0,basic blocked ikj,3,1,True
+1024,dense,100.0,basic blocked ikj,3,1,True
+1024,uniform,1.0,blocked csr,2,1,True
+1536,dense,100.0,basic blocked ikj,3,1,True
+2048,banded,0.1,blocked csr to_dense,3,1,True
+2048,banded,0.5,blocked csr to_dense,3,1,True
+2048,banded,1.0,blocked csr to_dense,3,1,True
+2048,banded,5.0,blocked csr to_dense,3,1,True
+2048,banded,10.0,blocked csr to_dense,3,1,True
+2048,banded,50.0,blocked csr to_dense,3,1,True
+2048,dense,100.0,basic blocked ikj,7,1,True
+2048,uniform,0.1,blocked csr to_dense,3,1,True
+2048,uniform,0.5,blocked csr to_dense,3,1,True
+2048,uniform,1.0,blocked csr to_dense,3,1,True
+2048,uniform,5.0,blocked csr to_dense,3,1,True
+2048,uniform,10.0,blocked csr to_dense,3,1,True
+2048,uniform,50.0,blocked csr to_dense,3,1,True
+3072,dense,100.0,basic blocked ikj,3,1,True
+4096,dense,100.0,blocked ikj,6,1,True
+4096,uniform,1.0,blocked csr,2,1,True
+8192,uniform,1.0,blocked csr,2,1,True
+16384,uniform,1.0,csr,1,1,True

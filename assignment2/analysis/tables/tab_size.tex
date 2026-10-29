@@ -1,0 +1,13 @@
+\begin{tabular}{rrrrrrrrr}
+\toprule
+$n$ & nnz($A$) & nnz($C$) & multiply-adds & csr (s) & blocked (s) & CSR $A{+}B{+}C$ (GiB) & $24n^2$ (GiB) & csr footprint (GiB) \\
+\midrule
+1024 & 10\,486 & 101\,812 & 106\,961 & 0.00109 (0.9\%) & 0.156 (0.5\%) & 0.00138 & 0.0234 & 0.285 \\
+2048 & 41\,943 & 776\,282 & 858\,508 & 0.00905 (0.7\%) & 1.31 (0.3\%) & 0.00964 & 0.0938 & 0.237 \\
+4096 & 167\,772 & 5\,640\,158 & 6\,873\,519 & 0.0711 ($<$0.1\%) & 10.6 (0.2\%) & 0.0668 & 0.375 & 0.269 \\
+8192 & 671\,089 & 37\,531\,010 & 54\,981\,772 & 0.595 (0.2\%) & 90.6 (2.9\%) & 0.435 & 1.50 & 0.761 \\
+16384 & 2\,684\,355 & 216\,299\,649 & 439\,822\,519 & 3.80 (3.6\%) & timeout\textsuperscript{a} & 2.48 & 6.00 & 6.67 \\
+32768 & 10\,737\,418 & -- & 3\,518\,404\,249 & out of memory\textsuperscript{c} & skipped\textsuperscript{b} & -- & 24.0 & -- \\
+\bottomrule
+\end{tabular}
+\par\smallskip{\footnotesize \textsuperscript{a} the first operation exceeded the 120\,s budget and was stopped. \textsuperscript{b} not attempted after a failure at a smaller size. \textsuperscript{c} the JVM ran out of its 8\,GiB heap.}
