@@ -8,7 +8,7 @@ build instructions, data, analysis and report.
 | Assignment | Topic | Status |
 |---|---|---|
 | [assignment1](assignment1/) | Basic matrix multiplication in Python, Java and C | submitted (tag `assignment1-v1.0`, [report](assignment1/report/main.pdf)) |
-| assignment2 | — | not started |
+| [assignment2](assignment2/) | Optimised dense and sparse (CSR) matrix multiplication in Java | submitted (tag `assignment2-v1.0`, [report](assignment2/report/main.pdf)) |
 | assignment3 | — | not started |
 | assignment4 | — | not started |
 
