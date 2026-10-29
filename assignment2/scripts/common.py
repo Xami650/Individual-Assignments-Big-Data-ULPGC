@@ -1,5 +1,9 @@
 """Shared helpers for the input, verification, benchmark and analysis scripts.
 
+Adapted from Assignment 1's scripts/common.py (tag assignment1-v1.0): the same
+dense file helpers and error bound, plus the CSR file format and the command
+line of the Java driver.
+
 Everything that depends on the declared protocol (sizes, densities, flags,
 input locations) is read from config/bench.json so that the scripts cannot
 drift from it.
