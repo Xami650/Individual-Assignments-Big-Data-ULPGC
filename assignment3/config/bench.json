@@ -94,9 +94,10 @@
   },
 
   "session_order": {
-    "rule": "The session runs one block per size, in ascending n. In each block, ikj (P_threads) runs first and again last; every other configuration of that n (par_ikj of P_threads, P_schedule, V_simd) runs in between, in the order given by random.Random(seed + n).shuffle over the declared list.",
+    "rule": "The session runs one block per size, in ascending n. Each block starts with ikj and then par_ikj (dynamic, p = 10), and ends with the same two in reverse order; every other configuration of that n (par_ikj of P_threads, P_schedule, V_simd) runs in between, in the order given by random.Random(seed + n).shuffle over the declared list.",
     "seed": 2026,
-    "drift_control": "the last ikj run of a block repeats the first; the speedups use the first, and the ratio last/first measures the drift of the machine (temperature, background load) over the block"
+    "drift_control": "ikj and par_ikj (dynamic, p = 10) are measured at the start and at the end of each block (repeat = first, last) in addition to the shuffled p = 10 run. The speedups use the first ikj run and the shuffled par_ikj runs; the last/first ratios measure the drift of the machine over the block (temperature, background load) for one thread and for all cores.",
+    "_pilot": "Added after the pilot (results/raw/pilot-1, not reported): with 2 s pauses, the mean clock rate of the busy cores (cycles / CPU time) of the multi-threaded runs at n = 4096 fell from about 3.1 GHz at the start of the block to about 2.0 GHz at its end, also within single runs, while single-thread runs stayed at 4.0 GHz even when the machine was hot (the MacBook Air has no fan). A one-thread drift control alone cannot see this."
   },
 
   "statistics": {
@@ -133,7 +134,12 @@
     "jvm_activity": "over the measured samples: garbage collections and GC time (GarbageCollectorMXBean), JIT compilation time (CompilationMXBean) and bytes allocated on the Java heap (com.sun.management.ThreadMXBean); at the start of measurement, the number of live Java threads and of operating-system threads of the process (proc_pidinfo, PROC_PIDTASKINFO, which also counts the JVM's GC and JIT threads); at exit, the heap bytes allocated since start-up and the process CPU time per QoS class (RUSAGE_INFO_V6)",
     "background_cpu": "the harness reads the system-wide busy CPU time (psutil.cpu_times: user + nice + system over all cores) before and after every process; minus the CPU time of the process itself (/usr/bin/time), it gives the CPU time used by other processes during the run (other_cpu_s in runs.csv). The 1-minute load average is checked once, before the session, against load_average_warning.",
     "process_model": "one fresh JVM per configuration (experiment, method, n, p, schedule, JVM flags); it creates the pool, runs the pre-warm, the warm-up samples and the measured samples, and shuts the pool down",
-    "pause_between_runs_seconds": 5,
+    "cool_down": {
+      "min_seconds": 5,
+      "max_seconds": 90,
+      "factor": 1.0,
+      "rule": "after each process the harness pauses for factor x the process's wall time, at least min_seconds and at most max_seconds, so that the machine is under load at most about half of the time and heat carried from one configuration into the next is reduced (see session_order._pilot)"
+    },
     "pre_warm": {
       "seconds": 1.0,
       "rule": "before any sample the driver runs the method for 1 s on small random dense inputs (n = min(N, 256), fixed seed), with the same pool, so that the JIT compiles it with a complete profile (introduced in Assignment 2, where a long first call otherwise stayed in OSR and C1-compiled code)"

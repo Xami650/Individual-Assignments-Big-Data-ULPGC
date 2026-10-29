@@ -4,9 +4,10 @@ Adapted from Assignment 2 (scripts/run_benchmarks.py at tag assignment2-v1.0):
 the process model, time budget, peak-RSS measurement, failure handling and
 output files are the same. Configurations are now (experiment, method, n,
 threads, schedule, SIMD setting). The session runs one block per size in
-ascending n: the sequential ikj first and again last (drift control), and the
-other configurations of that size in a seeded random order (session_order in
-config/bench.json). Every sample carries the change of the process counters
+ascending n: ikj and par_ikj with all logical processors at the start and again
+at the end (drift controls), and the other configurations of that size in a
+seeded random order (session_order in config/bench.json). After each process
+the harness pauses to let the machine cool down (measurement.cool_down). Every sample carries the change of the process counters
 over the sample (CPU time, CPU time on performance cores, instructions,
 cycles, context switches), measured by the driver itself. Around every process
 the harness also reads the system-wide CPU time (psutil), so that the CPU time
@@ -103,8 +104,12 @@ def configurations(config):
                           jvm_extra=vs["jvm_flags"]) for c in vs["configurations"]]
         random.Random(seed + n).shuffle(block)
         if n in pt["sizes"]:
-            block = [run("P_threads", pt["sequential"], n, repeat="first"), *block,
-                     run("P_threads", pt["sequential"], n, repeat="last")]
+            seq_method, par_method, schedule = pt["sequential"], pt["parallel"]["method"], pt["parallel"]["schedule"]
+            p_all = max(t for t in pt["threads"] if t <= os.cpu_count())
+            block = [run("P_threads", seq_method, n, repeat="first"),
+                     run("P_threads", par_method, n, p_all, schedule, repeat="first"), *block,
+                     run("P_threads", par_method, n, p_all, schedule, repeat="last"),
+                     run("P_threads", seq_method, n, repeat="last")]
         runs += block
     return runs
 
@@ -207,7 +212,7 @@ def main():
     parser.add_argument("--sizes", type=int, nargs="+", help="only these sizes (pilot runs)")
     parser.add_argument("--reps", type=int, help="override the declared repetitions (smoke tests)")
     parser.add_argument("--max-seconds", type=float, help="override the per-operation limit (to test the timeout path)")
-    parser.add_argument("--pause", type=float, help="override the pause between processes (smoke tests)")
+    parser.add_argument("--pause", type=float, help="fixed pause between processes instead of the cool-down (smoke tests)")
     parser.add_argument("--session", help="session name (default: timestamp; smoke* and pilot* sessions are not tracked)")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="print the configurations in run order and exit")
@@ -218,7 +223,7 @@ def main():
     if args.max_seconds is not None:
         budget["max_seconds_per_operation"] = args.max_seconds
     reps = args.reps if args.reps is not None else measurement["measured_repetitions"]
-    pause = args.pause if args.pause is not None else measurement["pause_between_runs_seconds"]
+    cool = measurement["cool_down"]
     runs = [r for r in configurations(config) if r["experiment"] in args.experiments
             and (args.max_n is None or r["n"] <= args.max_n) and (args.sizes is None or r["n"] in args.sizes)]
     if args.dry_run:
@@ -304,6 +309,9 @@ def main():
         rss_text = f"{rss / 2**20:.0f} MiB" if rss else "n/a"
         other_text = f"{float(other) / window:.2f} cores" if other else "n/a"
         print(f"  -> {status}, RSS {rss_text}, others {other_text}{', ' + detail if detail else ''}")
+        busy = float(resources.get("process_wall_s") or window)
+        pause = args.pause if args.pause is not None else min(cool["max_seconds"],
+                                                                max(cool["min_seconds"], cool["factor"] * busy))
         time.sleep(pause)
 
     after = subprocess.run(["sh", "-c", "date '+%Y-%m-%dT%H:%M:%S%z'; pmset -g therm; pmset -g batt | head -2; uptime"],
