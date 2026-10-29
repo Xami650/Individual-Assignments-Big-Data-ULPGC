@@ -33,6 +33,7 @@ everything measured so far.
 Usage (from assignment3/):
     python3 scripts/run_benchmarks.py                                   # full protocol
     python3 scripts/run_benchmarks.py --max-n 256 --reps 2 --pause 0 --session smoke
+    python3 scripts/run_benchmarks.py --sizes 2048 4096 --reps 2 --session pilot-1
     python3 scripts/run_benchmarks.py --dry-run                         # list the configurations in run order
 """
 
@@ -203,6 +204,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--experiments", nargs="+", choices=EXPERIMENTS, default=list(EXPERIMENTS))
     parser.add_argument("--max-n", type=int, help="only configurations with n <= MAX_N (smoke tests)")
+    parser.add_argument("--sizes", type=int, nargs="+", help="only these sizes (pilot runs)")
     parser.add_argument("--reps", type=int, help="override the declared repetitions (smoke tests)")
     parser.add_argument("--max-seconds", type=float, help="override the per-operation limit (to test the timeout path)")
     parser.add_argument("--pause", type=float, help="override the pause between processes (smoke tests)")
@@ -218,7 +220,7 @@ def main():
     reps = args.reps if args.reps is not None else measurement["measured_repetitions"]
     pause = args.pause if args.pause is not None else measurement["pause_between_runs_seconds"]
     runs = [r for r in configurations(config) if r["experiment"] in args.experiments
-            and (args.max_n is None or r["n"] <= args.max_n)]
+            and (args.max_n is None or r["n"] <= args.max_n) and (args.sizes is None or r["n"] in args.sizes)]
     if args.dry_run:
         for r in runs:
             print(run_id(r))
