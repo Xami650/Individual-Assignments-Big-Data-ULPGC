@@ -141,11 +141,11 @@ def iqr_text(rel):
     return r"$<$0.1\%" if rel < 0.001 else f"{rel * 100:.1f}\\%"
 
 
-def time_text(row, unit=1e6):
+def time_text(row, unit=1e6, iqr=True):
     if row is None:
         return "--"
     if row.status == "ok":
-        return f"{sig(row.median_ns / unit)} ({iqr_text(row.iqr_rel)})"
+        return f"{sig(row.median_ns / unit)} ({iqr_text(row.iqr_rel)})" if iqr else sig(row.median_ns / unit)
     return {"timeout": r"timeout\textsuperscript{a}", "skipped": r"skipped\textsuperscript{b}",
             "memory_budget_exceeded": r"out of memory\textsuperscript{c}"}.get(row.status, row.status)
 
@@ -202,7 +202,7 @@ def tables(s, budget_s, heap):
             r = pick(dense, method=m, n=n)
             cells.append(sig(r.gflops) if r.status == "ok" else "--")
         rows.append(cells)
-    group = (r" & \multicolumn{3}{c}{instructions per multiply-add} & \multicolumn{3}{c}{cycles per multiply-add}"
+    group = (r" & \multicolumn{3}{c}{instructions / mult.-add} & \multicolumn{3}{c}{cycles / mult.-add}"
              r" & \multicolumn{3}{c}{GFLOP/s} \\ \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} $n$")
     write_table("tab_dense_counters.tex", [group, *["basic", "ikj", "blocked"] * 3], rows, "r" * 10)
 
@@ -238,11 +238,12 @@ def tables(s, budget_s, heap):
             csr, dense_ = g["csr"], g["blocked"]
             total = csr.median_ns + g["to_csr"].median_ns + g["to_dense"].median_ns
             rows.append([f"{density:g}" if structure == "uniform" else "", structure, count(csr.nnz_a),
-                         f"{count(csr.nnz_c)} ({sig(csr.density_c_percent)}\\%)", count(csr.multiply_adds),
+                         f"{sig(csr.nnz_c / 1e3)} ({sig(csr.density_c_percent)}\\%)", sig(csr.multiply_adds / 1e6),
                          sig(csr.median_ns / 1e6), sig(g["to_csr"].median_ns / 1e6), sig(g["to_dense"].median_ns / 1e6),
                          sig(dense_.median_ns / 1e6), sig(dense_.median_ns / csr.median_ns),
                          sig(dense_.median_ns / total)])
-    write_table("tab_density.tex", ["$d$ (\\%)", "structure", "nnz($A$)", "nnz($C$) (density)", "multiply-adds",
+    write_table("tab_density.tex", ["$d$ (\\%)", "structure", "nnz($A$)", "nnz($C$), $10^3$ (density)",
+                                    "mult.-adds, $10^6$",
                                     "csr", "to\\_csr", "to\\_dense", "blocked", "speed-up", "incl. conv."],
                 rows, "rlrrrrrrrrr")
 
@@ -263,14 +264,14 @@ def tables(s, budget_s, heap):
     for n in sorted(size_rows.n.unique()):
         csr, dense_ = pick(size_rows, n=n, method="csr"), pick(size_rows, n=n, method="blocked")
         nnz_c = csr.nnz_c if csr.status == "ok" else math.nan
-        rows.append([str(n), count(csr.nnz_a), count(nnz_c), count(csr.multiply_adds),
-                     time_text(csr, 1e9), time_text(dense_, 1e9),
+        rows.append([str(n), sig(csr.nnz_a / 1e6), sig(nnz_c / 1e6), sig(csr.multiply_adds / 1e6),
+                     time_text(csr, 1e9, iqr=False), time_text(dense_, 1e9, iqr=False),
                      sig((csr.csr_bytes_a + csr.csr_bytes_b + (csr.csr_bytes_c if csr.status == "ok" else 0)) / GIB)
                      if csr.status == "ok" else "--",
                      sig(24 * n * n / GIB),
                      sig(csr.peak_footprint_bytes / GIB) if csr.status == "ok" else "--"])
-    write_table("tab_size.tex", ["$n$", "nnz($A$)", "nnz($C$)", "multiply-adds", "csr (s)", "blocked (s)",
-                                 "CSR $A{+}B{+}C$ (GiB)", "$24n^2$ (GiB)", "csr footprint (GiB)"],
+    write_table("tab_size.tex", ["$n$", "nnz($A$)", "nnz($C$)", "mult.-adds", "csr", "blocked",
+                                 "CSR", "dense", "footprint"],
                 rows, "rrrrrrrrr", notes)
 
 
@@ -322,8 +323,9 @@ def mark_failures(ax, rows, budget, color, marker):
         if row.status not in ("timeout", "memory_budget_exceeded"):
             continue
         ax.plot(row.n, budget, marker=marker, mfc="white", mec=color, ls="none")
-        text = "timeout" if row.status == "timeout" else "out of\nmemory"
-        ax.annotate(text, (row.n, budget), xytext=(0, 7), textcoords="offset points", ha="center", va="bottom",
+        # timeouts are labelled above the marker and memory failures below it, so neighbours never collide
+        text, dy, va = ("timeout", 7, "bottom") if row.status == "timeout" else ("out of\nmemory", -7, "top")
+        ax.annotate(text, (row.n, budget), xytext=(0, dy), textcoords="offset points", ha="center", va=va,
                     color=INK, fontsize=7)
 
 
@@ -428,7 +430,8 @@ def fig_size(s, budget_s, heap_bytes):
         g = rows[rows.method == m]
         ok = g[g.status == "ok"]
         med = errorbars(ax1, ok, 1e9, color=COLOR[m], marker=MARKER[m], label=m)
-        end_label(ax1, ok.n.iloc[-1], med.iloc[-1], m)
+        ax1.annotate(m, (ok.n.iloc[0], med.iloc[0]), xytext=(0, 8), textcoords="offset points", ha="center",
+                     color=INK, fontsize=8)
         mark_failures(ax1, g, budget_s, COLOR[m], MARKER[m])
     ax1.axhline(budget_s, ls=":", lw=0.9, color=INK_3, zorder=0)
     size_axis(ax1, sizes, [f"{x // 1024}k" for x in sizes])
