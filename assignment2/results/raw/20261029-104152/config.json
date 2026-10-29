@@ -1,0 +1,271 @@
+{
+  "_about": "Experimental protocol for Assignment 2, declared before the reported benchmark session. The scripts in ../scripts read this file; it is the single source of truth for methods, inputs, sizes, densities, repetitions, budgets and runtime flags.",
+  "study": {
+    "part_a": {
+      "research_question": "How do loop reordering (i-k-j) and cache blocking change the runtime and memory of sequential dense matrix multiplication in Java, relative to the basic i-j-k baseline of Assignment 1, as the size n grows?",
+      "factor": "dense method (basic, ikj, blocked) and matrix side length n; tile size bs as a secondary factor of blocked",
+      "outcomes": [
+        "kernel wall-clock time per multiplication",
+        "peak resident set size of the process",
+        "instructions and cycles of the process"
+      ],
+      "hypotheses": [
+        "HA1: ikj is several times faster than basic from n = 256 upward, and the gap grows with n. Its inner loop reads B and C along rows (unit stride) and its iterations are independent, so the JIT can vectorise it, whereas basic walks a column of B and chains every addition through one scalar.",
+        "HA2: blocked is no faster than ikj while ikj's row-wise stream through B is served quickly enough, because the vectorised inner loop is limited by loads and stores of L1 rather than by cache misses; it becomes faster than ikj only at the largest sizes, where B (8n^2 bytes) is read from main memory once per row of A. Tiles sized for the L1 cache (bs <= 64) gain nothing over larger, L2-sized tiles.",
+        "HA3: the three dense methods produce bitwise-identical results, because each adds the same products to C[i][j] in increasing k without fused multiply-add.",
+        "HA4: the optimisations change runtime but not memory: the three dense methods have the same peak memory, about 24n^2 bytes above the JVM baseline, since none allocates extra arrays."
+      ]
+    },
+    "part_b": {
+      "research_question": "Under which tested densities and nonzero structures does a CSR sparse product (Gustavson's algorithm) run faster or use less memory than the optimised dense method on the same logical matrices, and which costs (indexing, conversion, output) reduce its advantage?",
+      "factor": "density (percentage of nonzero entries; sparsity = 100 - density), nonzero structure (uniform, banded) and n",
+      "outcomes": [
+        "kernel time per multiplication",
+        "conversion time (dense to CSR, CSR to dense), measured separately",
+        "nonzero counts of A, B and C",
+        "element storage of each representation",
+        "peak resident set size of the process"
+      ],
+      "hypotheses": [
+        "HB1: the csr kernel time follows the number of scalar multiply-adds (expected n^3 d^2 for both structures) plus the size of the output, not n^3; dense time does not depend on the density.",
+        "HB2: at equal density and equal multiply-add count, banded inputs give far fewer output nonzeros than uniform ones (C stays within a band about twice as wide, at most about 4dn^2 entries, while uniform inputs fill C up to n^2 (1 - (1 - d^2)^n)), so csr is faster and smaller on banded inputs: density alone does not determine performance.",
+        "HB3: at n = 2048, csr is faster than blocked at low densities and loses its advantage somewhere between 5% and 50% density for uniform inputs; the break-even density is higher for banded inputs.",
+        "HB4: CSR stores 12 bytes per nonzero plus 4(n + 1) bytes, so it is smaller than the dense form (8n^2) for densities below about 67%; for uniform inputs of 5% density and more the product C fills in so much that its CSR form is larger than its dense form.",
+        "HB5: converting dense inputs to CSR costs O(n^2) per matrix, so when the inputs arrive dense, the conversion outweighs the csr kernel at low densities.",
+        "HB6: with a fixed density the dense methods are limited by time (n^3 work) and csr by memory, because nnz(C) grows towards n^2 once n d^2 is no longer small."
+      ]
+    }
+  },
+  "methods": {
+    "_common": "Java 25, IEEE-754 binary64 (double), one thread, our own code only. Dense matrices are double[][] (array of row arrays) for every dense method, so only the loop structure differs. All code is in src/main/java/org/ulpgc/bd/matmul/.",
+    "basic": {
+      "role": "baseline (Part A and the comparison point for the optimisations)",
+      "change": "none: the i-j-k triple loop with a scalar accumulator, copied unchanged from Assignment 1 (tag assignment1-v1.0, MatMul.multiply), validated there against NumPy and the C and Python versions",
+      "code": "DenseMatMul.basic"
+    },
+    "ikj": {
+      "role": "optimisation 1: loop reordering",
+      "change": "loop order i-k-j: for each A[i][k], add A[i][k] times row k of B to row i of C; row i of C is cleared first",
+      "expected_effect": "unit-stride access to B and C instead of a column walk over B, and independent inner iterations that the JIT can vectorise (SuperWord, 128-bit NEON, 2 doubles per vector)",
+      "code": "DenseMatMul.ikj"
+    },
+    "blocked": {
+      "role": "optimisation 2: cache blocking (tiling)",
+      "change": "the i, k and j loops of ikj are split into tiles of bs indices (tile loops ii, kk, jj outside, i-k-j inside); C is cleared first",
+      "expected_effect": "each bs x bs tile of A, B and C is reused while it stays in cache, which cuts the traffic to main memory once the matrices no longer fit in the caches",
+      "tile_size": 512,
+      "tile_size_rationale": "Three 512 x 512 double tiles take 6 MiB and fit in the 16 MiB L2 of the performance cores. Tiles that fit in the 128 KiB L1 (bs <= 64 for three tiles) shorten the vectorised inner loop without saving L1 traffic. In a single-run pilot (not part of the reported data) bs = 512 was the fastest of 16-512 at n = 4096 (10.4 s against 12.9 s for ikj); experiment A_block re-measures the tile sizes under the full protocol.",
+      "code": "DenseMatMul.blocked"
+    },
+    "csr": {
+      "role": "Part B sparse product",
+      "storage_format": "compressed sparse row (CSR): int rowPtr[n + 1], int colIdx[nnz], double values[nnz]; column indices strictly increasing within each row",
+      "algorithm": "Gustavson's row-by-row product in two passes: a symbolic pass counts nnz of each row of C with a marker array, C is allocated exactly, and a numeric pass accumulates each row in a dense array of length n and writes its columns in increasing order (sorted, or by scanning the marker array when a row holds more than n/16 entries)",
+      "library_use": "none in the product; SciPy is used only by scripts/verify.py as a correctness reference",
+      "code": "CsrMatrix.multiply"
+    },
+    "to_csr": {
+      "role": "conversion cost: dense to CSR for both inputs",
+      "code": "CsrMatrix.fromDense (applied to A and to B)"
+    },
+    "to_dense": {
+      "role": "conversion cost: the CSR product C back to a dense n x n matrix",
+      "code": "CsrMatrix.toDense"
+    }
+  },
+  "inputs": {
+    "dense": {
+      "reuse": "the Assignment 1 generator and files, unchanged; for n <= 2048 the files are byte-identical to Assignment 1's (same SHA-256)",
+      "generator": "numpy.random.Generator(PCG64(SeedSequence([seed, n])))",
+      "seed": 2026,
+      "distribution": "uniform on [-1.0, 1.0), every entry nonzero",
+      "draw_order": "A first (n*n values, row-major), then B",
+      "file_format": "raw little-endian float64, row-major, no header",
+      "files": "data/inputs/A_<n>.bin and B_<n>.bin"
+    },
+    "sparse": {
+      "generator": "numpy.random.Generator(PCG64(SeedSequence([seed, n, structure, ppm, matrix]))), one per matrix; structure 0 = uniform, 1 = banded; ppm = density in parts per million; matrix 0 = A, 1 = B",
+      "seed": 2026,
+      "nonzero_count": "exactly round(d/100 * n^2) for density d%, at distinct positions drawn without replacement",
+      "structures": {
+        "uniform": "every position of the n x n matrix is equally likely (uniform random sparsity pattern)",
+        "banded": "only positions with |i - j| <= w, w = ceil(d/100 * n), are possible, and they are equally likely; the band is about half full. Same nonzero count as uniform, and the same expected number of nonzeros per row."
+      },
+      "values": "uniform on [-1.0, 1.0), exact zeros redrawn; drawn after the positions, in row-major order",
+      "file_format": "little-endian int64 n, int64 nnz, int32 rowPtr[n + 1], int32 colIdx[nnz], float64 values[nnz]",
+      "files": "data/inputs/sparse/<structure>_<n>_d<percent>_<A|B>.csr"
+    },
+    "checksums": "data/checksums.sha256 (SHA-256 of every input file)"
+  },
+  "experiments": {
+    "A_dense": {
+      "question": "Part A: runtime and memory of the three dense methods against n",
+      "methods": [
+        "basic",
+        "ikj",
+        "blocked"
+      ],
+      "inputs": "dense",
+      "sizes": [
+        64,
+        128,
+        256,
+        384,
+        512,
+        768,
+        1024,
+        1536,
+        2048,
+        3072,
+        4096
+      ],
+      "_notes": "The Assignment 1 sizes plus 3072 and 4096. Powers of two are interleaved with intermediate sizes so that effects specific to power-of-two strides can be told apart from the trend. 4096 is the largest size attempted because of the session budget; basic is expected to exceed the time limit before it."
+    },
+    "A_block": {
+      "question": "Part A: sensitivity of blocked to the tile size",
+      "method": "blocked",
+      "inputs": "dense",
+      "sizes": [
+        2048,
+        4096
+      ],
+      "tile_sizes": [
+        32,
+        64,
+        128,
+        256,
+        512
+      ],
+      "_notes": "bs = 512 is shared with A_dense and measured only once."
+    },
+    "B_density": {
+      "question": "Part B: sparse against dense across densities and structures, on the same logical matrices",
+      "n": 2048,
+      "densities_percent": [
+        0.1,
+        0.5,
+        1,
+        5,
+        10,
+        50
+      ],
+      "structures": [
+        "uniform",
+        "banded"
+      ],
+      "methods": [
+        "csr",
+        "blocked",
+        "to_csr",
+        "to_dense"
+      ],
+      "_notes": "Sparsity levels 99.9, 99.5, 99, 95, 90 and 50%. The dense method is blocked, the fastest dense method of the pilot at n >= 2048; it reads the same CSR files and expands them to double[][] outside the timed region."
+    },
+    "B_size": {
+      "question": "Part B: largest feasible size of csr and of the dense method at a fixed density",
+      "structure": "uniform",
+      "density_percent": 1,
+      "sizes": [
+        1024,
+        2048,
+        4096,
+        8192,
+        16384,
+        32768
+      ],
+      "methods": [
+        "csr",
+        "blocked"
+      ],
+      "_notes": "Sizes double until a method exceeds a budget; larger sizes are then skipped for that method. The point n = 2048 is shared with B_density and measured only once."
+    }
+  },
+  "correctness": {
+    "unit_tests": "JUnit 5: hand-computed 2x2 and 3x3 products, identity and zero matrices, sizes that are not multiples of the tile size, every dense method bitwise against basic, CSR conversions, empty rows and structural cancellation in the sparse product, and the file formats",
+    "dense_sizes": [
+      1,
+      2,
+      3,
+      10,
+      64,
+      100,
+      256
+    ],
+    "dense_cases": "random (the dense inputs; reference numpy.matmul), A x I (exact answer A) and A x 0 (exact answer 0), as in Assignment 1",
+    "tile_sizes": [
+      7,
+      64,
+      512
+    ],
+    "sparse": {
+      "sizes": [
+        1,
+        10,
+        100,
+        256
+      ],
+      "densities_percent": [
+        0,
+        1,
+        10,
+        50,
+        100
+      ],
+      "structures": [
+        "uniform",
+        "banded"
+      ],
+      "reference": "scipy.sparse CSR product (values) and the product of the 0/1 patterns (structural nonzero count of C)"
+    },
+    "criterion": "|C_ij - R_ij| <= atol + rtol * (|A||B|)_ij for every i, j",
+    "rtol": "2 * gamma_n, with gamma_n = n*u / (1 - n*u) and u = 2^-53",
+    "atol": 0.0,
+    "justification": "As in Assignment 1: any summation order of an n-term dot product has forward error at most gamma_n (|A||B|)_ij (Higham, 2nd ed., Secs. 3.1 and 3.5), so two correct results differ by at most 2 gamma_n (|A||B|)_ij. HA3 additionally expects all methods, csr included, to agree bit for bit."
+  },
+  "measurement": {
+    "timer_boundary": "Only the operation of the method. Dense methods: the kernel call, including the clearing of C that ikj and blocked perform. csr: the whole CsrMatrix.multiply call, including both passes, the allocation of C and the ordering of its columns. Conversions: their own calls (to_csr converts A and B; to_dense converts C). Loading inputs, converting them to the method's representation, JVM start-up and the JIT pre-warm are outside the timed region.",
+    "conversion_policy": "measured separately (methods to_csr and to_dense); the csr kernel time excludes conversion",
+    "clock": "System.nanoTime() (monotonic)",
+    "result_consumption": "after each sample the driver prints a checksum of the result (sum of all entries of C; for to_csr, of the stored values of A and B), so the computation cannot be eliminated",
+    "process_model": "one fresh JVM per configuration (experiment, method, input, tile size); it runs the pre-warm, the warm-up samples and the measured samples",
+    "run_order": "experiments in the order A_dense, A_block, B_density, B_size; within an experiment n ascending (B_density: density ascending, uniform before banded); methods in the declared order",
+    "pause_between_runs_seconds": 2,
+    "pre_warm": {
+      "seconds": 1.0,
+      "rule": "before any sample the driver runs the method for 1 s on small random inputs (n = min(N, 256), densities 2% and 50%, fixed seed) so that the JIT compiles it with a complete profile. In the pilot, ikj at n = 2048 without this step stayed in on-stack-replacement and C1-compiled code (3.3 s per multiplication, deoptimised when its loops first exited), against 1.24 s once compiled normally. This step is new in Assignment 2."
+    },
+    "warmup_runs": 1,
+    "min_warmup_seconds": 1.0,
+    "warmup_rule": "warmup_runs is a minimum: warm-up samples continue until at least min_warmup_seconds of warm-up work have run (the CPU frequency ramp observed in Assignment 1). With the pre-warm, one warm-up sample is enough for the JIT. All warm-up samples are kept in the raw data and excluded from the summaries.",
+    "measured_repetitions": 5,
+    "batching": {
+      "min_sample_seconds": 0.1,
+      "rule": "As in Assignment 1: each sample times k back-to-back operations (k recorded; time per operation = elapsed / k); the first warm-up uses k = 1 and every later sample k = max(1, ceil(min_sample_seconds / t)), t being the per-operation time of the latest warm-up. All measured samples of a configuration share the same k."
+    },
+    "summary": "median and interquartile range (IQR) of the measured samples; every raw sample is kept"
+  },
+  "budgets": {
+    "max_seconds_per_operation": 120,
+    "startup_slack_seconds": 60,
+    "max_heap": "8 GiB (-Xmx8g)",
+    "max_peak_rss_bytes": 10000000000,
+    "max_session_minutes": 90,
+    "policy": "Each process gets startup_slack_seconds to load and convert its inputs and pre-warm, then max_seconds_per_operation for every sample line. The harness kills a process that misses a deadline, records a timeout with the limit, and skips larger n for that method in that experiment. The heap limit is enforced by the JVM: an OutOfMemoryError makes the driver exit with status 3, recorded as memory_budget_exceeded, and larger n are skipped likewise. Peak RSS is checked after the run. Timeouts and memory failures are reported as results, never given an invented time."
+  },
+  "memory": {
+    "metrics": {
+      "peak_rss": "peak resident set size of the whole process, from /usr/bin/time -l (as in Assignment 1)",
+      "peak_footprint": "peak memory footprint of the process, from the same /usr/bin/time -l output; unlike RSS it also counts pages that macOS has compressed, which a pilot run showed to matter above about 8 GB",
+      "element_storage": "bytes of the matrix elements and indices, computed from n and the nonzero counts: 8n^2 per dense matrix, 12 nnz + 4(n + 1) per CSR matrix"
+    },
+    "limitations": "Peak RSS covers the whole process (JVM, inputs, conversions, garbage not yet collected) and depends on how the garbage collector sizes the heap; element storage ignores object headers and the csr work arrays (marker and accumulator, 12n bytes). The two are reported side by side, not as the same quantity."
+  },
+  "build_and_runtime": {
+    "jdk": "OpenJDK 25 (HotSpot, tiered JIT, G1 garbage collector)",
+    "jvm_flags": [
+      "-Xmx8g"
+    ],
+    "build": "mvn package (maven.compiler.release 25)",
+    "_notes": "One set of JVM flags for every run, so that dense and sparse runs share the same heap limit. Defaults otherwise: UseSuperWord = true, MaxVectorSize = 16 (128-bit NEON), and no automatic fused multiply-add (Java semantics forbid contracting a*b + c)."
+  }
+}
