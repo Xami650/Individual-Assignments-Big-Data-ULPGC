@@ -1,0 +1,13 @@
+# Generated input matrices: regenerate with scripts/gen_inputs.py (checksums are tracked)
+data/inputs/
+
+# Build outputs
+target/
+__pycache__/
+
+# Scratch outputs of correctness runs and of the disassembly script
+results/tmp/
+
+# Smoke-test and pilot benchmark sessions
+results/raw/smoke*/
+results/raw/pilot*/

@@ -1,0 +1,181 @@
+{
+  "_about": "Experimental protocol for Assignment 3, declared before the reported benchmark session. The scripts in ../scripts read this file; it is the single source of truth for methods, inputs, sizes, thread counts, repetitions, budgets and runtime flags.",
+
+  "study": {
+    "research_question": "How does the number of worker threads (1 to 20) affect the runtime, speedup, efficiency and memory of a row-parallel version of the validated i-k-j matrix multiplication in Java, for n = 64 to 4096 on a 10-core Apple M4 with 4 performance and 6 efficiency cores, and when does parallel execution help?",
+    "factor": "number of worker threads p and matrix side length n; the row schedule (dynamic or static) as a secondary factor",
+    "outcomes": ["kernel wall-clock time per multiplication", "speedup S(p) and efficiency E(p) against the sequential baseline", "overhead of the parallel implementation with one thread", "process CPU time per sample and its share on performance cores", "instructions and cycles per multiply-add, summed over all cores", "peak resident set size and peak memory footprint of the process"],
+    "hypotheses": [
+      "H1: par_ikj is bitwise identical to ikj for every thread count, both schedules and with or without SuperWord. Each row of C is computed by one thread with the same operations in the same order, and the vector lanes of the inner loop are independent entries of C.",
+      "H2: with one thread, par_ikj pays a fixed cost per call for handing the work to a pool thread and waiting for it (expected: tens of microseconds). Relative to ikj this overhead is above 10% at n = 64 and below 1% from n = 512.",
+      "H3: for n <= 128 one multiplication lasts tens to hundreds of microseconds, comparable to the cost of waking and joining p threads, so the speedup stays low (below 2) and can fall below 1 at high p.",
+      "H4: the gain per added thread is largest up to p = 4, the number of performance cores. With the dynamic schedule, threads beyond 4 run partly on efficiency cores and add less each, so S(10) is well below 10, and the share of CPU time on efficiency cores rises from near 0 at p <= 4. With the static schedule every thread gets the same number of rows and the slowest core sets the time, so static is slower than dynamic for 4 < p <= 10.",
+      "H5: the i-k-j kernel reads all of B (8n^2 bytes) for every row of C, one multiply-add per 8 bytes of B. When several cores stream B at once, the shared L2 cache and the memory bandwidth limit the gain: cycles per multiply-add, summed over all cores, rise with p, and more so for n >= 2048, where B (at least 32 MiB) no longer fits in the 16 MiB L2 of the performance cores and is streamed from memory. Efficiency is therefore lower at n >= 2048 than at n = 512 to 1024. No superlinear speedup is expected: every thread needs all of B, so splitting the rows does not shrink the working set of a thread.",
+      "H6: oversubscription (p = 12, 16, 20, more threads than the 10 logical processors) gives no further speedup; with the dynamic schedule its cost is small (within 5% of p = 10).",
+      "H7: peak memory does not depend on p beyond a few MiB (thread stacks): all threads share A, B and C, and the kernel allocates nothing per row."
+    ],
+    "vectorisation": {
+      "question": "Optional extension: how much does the JIT's automatic SIMD vectorisation (HotSpot C2 SuperWord) contribute to the sequential and the parallel kernel at a fixed thread count, and does its effect change with the number of threads?",
+      "factor": "SuperWord on (JVM default) or off (-XX:-UseSuperWord), at fixed n and p",
+      "outcomes": ["time per multiplication", "instructions and cycles per multiply-add", "vector and scalar floating-point instructions in the compiled inner loop"],
+      "hypotheses": [
+        "H8: with SuperWord disabled the C2-compiled inner loop uses scalar fmul/fadd instead of two-lane fmul.2d/fadd.2d, the instructions per multiply-add roughly double, and the kernel slows down most where it is limited by execution (p = 1, n <= 1024); at p = 10 and n = 2048, where memory traffic limits the kernel, vectorisation gains less."
+      ]
+    },
+    "_pilot": "A single-run probe before this protocol was written (not part of the reported data, no warm-up protocol): par_ikj (dynamic) at n = 1024 took 139 ms with 1 thread, 49 ms with 4 and 32 ms with 10, and the process cycles rose with p for nearly the same instructions. It shaped H4 and H5 and the choice of sizes around the cache capacities (B = 2, 8 and 32 MiB at n = 512, 1024 and 2048)."
+  },
+
+  "methods": {
+    "_common": "Java 25, IEEE-754 binary64 (double), our own code only. Matrices are double[][] (an array of row arrays) as in Assignments 1 and 2, so the sequential and the parallel method share the storage layout, the inputs and the arithmetic. All code is in src/main/java/org/ulpgc/bd/matmul/.",
+    "ikj": {
+      "role": "sequential baseline: the equivalent sequential counterpart of par_ikj",
+      "change": "none: DenseMatMul.ikj copied unchanged from Assignment 2 (tag assignment2-v1.0), where it was validated against NumPy and bitwise against the Assignment 1 baseline",
+      "threads": "runs on the main thread; no thread pool is created",
+      "code": "DenseMatMul.ikj"
+    },
+    "par_ikj": {
+      "role": "parallel implementation",
+      "algorithm": "the i-k-j loop of ikj applied to one row of C at a time (ParallelMatMul.ikjRow is the loop body of DenseMatMul.ikj for one i); the rows of C are distributed among p worker threads",
+      "threads": "a fixed pool of exactly p platform worker threads (java.util.concurrent.ThreadPoolExecutor with p core threads, all started before any timing). The main thread only submits p tasks with invokeAll and waits; it never computes. p therefore counts the compute threads.",
+      "schedules": {
+        "dynamic": "each worker repeatedly claims the next unclaimed row from a shared AtomicInteger (chunks of one row) until no rows are left; fast cores take more rows than slow ones",
+        "static": "worker t computes the contiguous band of rows [floor(t n / p), floor((t + 1) n / p)), fixed in advance, like OpenMP schedule(static)"
+      },
+      "shared_data": "A and B are only read. Every row of C is written by exactly one task. invokeAll returns after every task has completed, and the actions of a task happen-before the return of Future.get (memory consistency properties of java.util.concurrent), so the main thread sees every write. Rows are separate arrays, so two threads can touch the same cache line only at the boundary between two row arrays.",
+      "code": "ParallelMatMul.ikj"
+    }
+  },
+
+  "inputs": {
+    "reuse": "the Assignment 1 dense generator and files, unchanged (through Assignment 2); every file used here is byte-identical to the Assignment 2 file of the same size (same SHA-256)",
+    "generator": "numpy.random.Generator(PCG64(SeedSequence([seed, n])))",
+    "seed": 2026,
+    "distribution": "uniform on [-1.0, 1.0), every entry nonzero",
+    "draw_order": "A first (n*n values, row-major), then B",
+    "file_format": "raw little-endian float64, row-major, no header",
+    "files": "data/inputs/A_<n>.bin and B_<n>.bin",
+    "checksums": "data/checksums.sha256 (SHA-256 of every input file)"
+  },
+
+  "hardware": {
+    "cores": "Apple M4: 4 performance cores sharing a 16 MiB L2 cache and 6 efficiency cores sharing a 4 MiB L2 cache; 10 physical cores and 10 logical processors (no simultaneous multithreading). Recorded in env.txt by scripts/collect_env.sh.",
+    "affinity": "none set. macOS provides no interface to bind a thread to a core, so the scheduler places the threads on performance and efficiency cores. The share of CPU time spent on performance cores is measured instead (proc_pid_rusage, RUSAGE_INFO_V6).",
+    "oversubscription": "p = 12, 16 and 20 run more worker threads than the 10 hardware execution contexts; they are labelled oversubscribed in every table and figure"
+  },
+
+  "experiments": {
+    "P_threads": {
+      "question": "Runtime, speedup, efficiency and memory of par_ikj (dynamic schedule) against the sequential ikj, as functions of p and n",
+      "sequential": "ikj",
+      "parallel": {"method": "par_ikj", "schedule": "dynamic"},
+      "sizes": [64, 128, 256, 512, 1024, 2048, 4096],
+      "threads": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20],
+      "_notes": "Every p from 1 to 10 locates the change at p = 4 (performance cores) and p = 10 (logical processors); 12, 16 and 20 are oversubscribed. Sizes 64 to 256 show the dispatch overhead; B takes 2 MiB at n = 512 (fits both L2 caches), 8 MiB at 1024 (fits only the performance-core L2) and 32 MiB at 2048 (fits neither). 4096 is the largest size of Assignment 2 and the largest attempted here, because of the session budget."
+    },
+    "P_schedule": {
+      "question": "Static against dynamic row schedule on the heterogeneous cores",
+      "method": "par_ikj",
+      "schedule": "static",
+      "sizes": [256, 1024, 2048],
+      "threads": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20],
+      "_notes": "The dynamic counterparts are the P_threads configurations with the same n and p."
+    },
+    "V_simd": {
+      "question": "Optional vectorisation extension: SuperWord off against on at fixed p",
+      "jvm_flags": ["-XX:-UseSuperWord"],
+      "configurations": [
+        {"method": "ikj"},
+        {"method": "par_ikj", "schedule": "dynamic", "threads": 4},
+        {"method": "par_ikj", "schedule": "dynamic", "threads": 10}
+      ],
+      "sizes": [512, 1024, 2048],
+      "_notes": "The SuperWord-on counterparts are the P_threads configurations with the same method, n and p (first ikj run of the size block for the sequential method)."
+    }
+  },
+
+  "session_order": {
+    "rule": "The session runs one block per size, in ascending n. In each block, ikj (P_threads) runs first and again last; every other configuration of that n (par_ikj of P_threads, P_schedule, V_simd) runs in between, in the order given by random.Random(seed + n).shuffle over the declared list.",
+    "seed": 2026,
+    "drift_control": "the last ikj run of a block repeats the first; the speedups use the first, and the ratio last/first measures the drift of the machine (temperature, background load) over the block"
+  },
+
+  "statistics": {
+    "central": "median of the time per multiplication over the measured samples",
+    "variability": "interquartile range (IQR), also relative to the median",
+    "speedup": "S(p) = median T_seq / median T_p, with T_seq from the first ikj run of the size block",
+    "speedup_interval": "[Q1_seq / Q3_p, Q3_seq / Q1_p]",
+    "efficiency": "E(p) = S(p) / p",
+    "overhead": "median T_par(p = 1) / median T_seq, for each schedule",
+    "decomposition": "T = C / (f U) per multiplication, with C the cycles summed over all cores, f = cycles / CPU time the mean clock rate of the busy cores and U = CPU time / elapsed time the mean number of busy cores, all from sums over the measured samples. Hence S = (C_seq / C_p) (f_p / f_seq) (U_p / U_seq): extra cycles (contention), clock rate (frequency and core type) and idle threads."
+  },
+
+  "correctness": {
+    "unit_tests": "JUnit 5: hand-computed 2x2 and 3x3 products, identity and zero matrices, an exact BigDecimal reference, the overwriting of a reused output, par_ikj bitwise against ikj for n in {1, 2, 3, 7, 33, 64, 65, 100}, p in {1, 2, 3, 4, 7, 10, 16, 20} and both schedules (p > n included), 200 repeated calls on one pool, the static bands, exception propagation, the process counters, the file format and the driver contract",
+    "sizes": [1, 2, 3, 10, 64, 100, 256],
+    "cases": "random (the dense inputs; reference numpy.matmul), A x I (exact answer A) and A x 0 (exact answer 0), as in Assignments 1 and 2",
+    "threads": [1, 2, 3, 4, 10, 16],
+    "schedules": ["dynamic", "static"],
+    "superword_off": [
+      {"method": "ikj"},
+      {"method": "par_ikj", "schedule": "dynamic", "threads": 4}
+    ],
+    "criterion": "|C_ij - R_ij| <= atol + rtol * (|A||B|)_ij for every i, j",
+    "rtol": "2 * gamma_n, with gamma_n = n*u / (1 - n*u) and u = 2^-53",
+    "atol": 0.0,
+    "justification": "As in Assignments 1 and 2: any summation order of an n-term dot product has forward error at most gamma_n (|A||B|)_ij (Higham, 2nd ed., Secs. 3.1 and 3.5), so two correct results differ by at most 2 gamma_n (|A||B|)_ij. H1 additionally expects every configuration of a case to agree bit for bit."
+  },
+
+  "measurement": {
+    "timer_boundary": "Only the multiplication. ikj: the kernel call, including the clearing of each row of C (as in Assignment 2). par_ikj: the whole ParallelMatMul.ikj call: building the p tasks, handing them to the already running pool threads, the computation and the wait until every task has finished (invokeAll). Creating the pool and starting its threads, loading the inputs, JVM start-up and the JIT pre-warm are outside the timed region.",
+    "clock": "System.nanoTime() (monotonic)",
+    "result_consumption": "after each sample the driver prints a checksum of C (sum of all entries), so the computation cannot be eliminated; the checksums are compared across configurations",
+    "per_sample_counters": "proc_pid_rusage(getpid(), RUSAGE_INFO_V6) read through the Java FFM API immediately before and after each sample: process CPU time (user + system), CPU time on performance cores, instructions and cycles (total and on performance cores). The values are sums over all threads of the process; the JVM activity checks show whether threads other than the workers ran.",
+    "jvm_activity": "over the measured samples: garbage collections and GC time (GarbageCollectorMXBean) and JIT compilation time (CompilationMXBean); the number of live JVM threads at the start of measurement; at exit, the process CPU time per QoS class (RUSAGE_INFO_V6)",
+    "process_model": "one fresh JVM per configuration (experiment, method, n, p, schedule, JVM flags); it creates the pool, runs the pre-warm, the warm-up samples and the measured samples, and shuts the pool down",
+    "pause_between_runs_seconds": 5,
+    "pre_warm": {
+      "seconds": 1.0,
+      "rule": "before any sample the driver runs the method for 1 s on small random dense inputs (n = min(N, 256), fixed seed), with the same pool, so that the JIT compiles it with a complete profile (introduced in Assignment 2, where a long first call otherwise stayed in OSR and C1-compiled code)"
+    },
+    "warmup_runs": 1,
+    "min_warmup_seconds": 1.0,
+    "warmup_rule": "warmup_runs is a minimum: warm-up samples continue until at least min_warmup_seconds of warm-up work have run. All warm-up samples are kept in the raw data and excluded from the summaries.",
+    "measured_repetitions": 5,
+    "batching": {
+      "min_sample_seconds": 0.1,
+      "rule": "As in Assignments 1 and 2: each sample times k back-to-back multiplications (k recorded; time per multiplication = elapsed / k); the first warm-up uses k = 1 and every later sample k = max(1, ceil(min_sample_seconds / t)), t being the time per multiplication of the latest warm-up. All measured samples of a configuration share the same k."
+    },
+    "load_average_warning": 1.0
+  },
+
+  "vectorisation_evidence": {
+    "disassembly": "scripts/simd_evidence.py runs the driver once per setting (SuperWord on and off) with -XX:+UnlockDiagnosticVMOptions -XX:CompileCommand=print for DenseMatMul::ikj and ParallelMatMul::ikjRow; these diagnostic flags are used only in that separate run, never in a timed run. Without the hsdis plugin, HotSpot prints the machine code as hexadecimal instruction words; the script assembles them with clang (.inst directives), disassembles them with objdump, and counts the two-lane vector (.2d) and the scalar double-precision multiply and add instructions in the final C2-compiled code of each method.",
+    "counters": "instructions and cycles per multiply-add from the per-sample counters of the V_simd and P_threads configurations"
+  },
+
+  "budgets": {
+    "max_seconds_per_operation": 120,
+    "startup_slack_seconds": 60,
+    "max_heap": "8 GiB (-Xmx8g)",
+    "max_peak_rss_bytes": 10000000000,
+    "max_session_minutes": 90,
+    "policy": "As in Assignment 2. Each process gets startup_slack_seconds to load its inputs, create the pool and pre-warm, then max_seconds_per_operation for every sample line. The harness kills a process that misses a deadline, records a timeout with the limit, and skips larger n for the same series (experiment, method, p, schedule, JVM flags). An OutOfMemoryError makes the driver exit with status 3, recorded as memory_budget_exceeded, and larger n are skipped likewise. Peak RSS is checked after the run. Timeouts and memory failures are reported as results, never given an invented time."
+  },
+
+  "memory": {
+    "metrics": {
+      "peak_rss": "peak resident set size of the whole process, from /usr/bin/time -l (as in Assignments 1 and 2)",
+      "peak_footprint": "peak memory footprint of the process, from the same /usr/bin/time -l output; unlike RSS it also counts compressed pages",
+      "element_storage": "bytes of the matrix elements, 8n^2 per matrix, 24n^2 for A, B and C"
+    },
+    "limitations": "Peak RSS covers the whole process (JVM, thread stacks, inputs, garbage not yet collected) and depends on how the garbage collector sizes the heap; element storage ignores object headers. They are reported side by side, not as the same quantity."
+  },
+
+  "build_and_runtime": {
+    "jdk": "OpenJDK 25 (HotSpot, tiered JIT, G1 garbage collector)",
+    "jvm_flags": ["-Xmx8g"],
+    "native_access": "the jar manifest declares Enable-Native-Access: ALL-UNNAMED for the FFM call to proc_pid_rusage, so no extra JVM flag is needed",
+    "build": "mvn package (maven.compiler.release 25)",
+    "_notes": "One set of JVM flags for every run, the Assignment 2 heap limit included; V_simd adds -XX:-UseSuperWord. Defaults otherwise: UseSuperWord = true, MaxVectorSize = 16 (128-bit NEON, two doubles per vector), no automatic fused multiply-add (Java semantics forbid contracting a*b + c), G1 with 9 parallel and 2 concurrent GC threads, dynamic number of JIT compiler threads (CICompilerCount = 4)."
+  }
+}
