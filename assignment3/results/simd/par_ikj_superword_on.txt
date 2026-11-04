@@ -1,7 +1,7 @@
 # java -Xmx8g -XX:+UnlockDiagnosticVMOptions -XX:CompileCommand=quiet -XX:CompileCommand=print,org.ulpgc.bd.matmul.*::* -jar target/matmul.jar --method par_ikj --n 512 --a data/inputs/A_512.bin --b data/inputs/B_512.bin --warmup 1 --reps 1 --threads 4 --schedule dynamic --pre-warm-seconds 1.0 --min-sample-seconds 0.1 --min-warmup-seconds 1.0
 # final C2 code of every method with a floating-point multiply
 
-### org.ulpgc.bd.matmul.ParallelMatMul::ikjRow (C2, compile id 630, 324 words)
+### org.ulpgc.bd.matmul.ParallelMatMul::ikjRow (C2, compile id 773, 324 words)
        0:      	nop
        4:      	sub	x9, sp, #0x14, lsl #12  ; =0x14000
        8:      	str	xzr, [x9]
@@ -252,7 +252,7 @@
      3dc:      	str	d16, [sp, #0x18]
      3e0:      	str	x3, [sp, #0x20]
      3e4:      	str	w4, [sp, #0x28]
-     3e8:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     3e8:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      3ec:      	nop
      3f0:      	movk	xzr, #0x4e4
      3f4:      	movk	xzr, #0x300
@@ -261,7 +261,7 @@
      400:      	mov	w1, #-0x1c              ; =-28
      404:      	mov	x29, x2
      408:      	str	w4, [sp]
-     40c:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     40c:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      410:      	nop
      414:      	movk	xzr, #0x508
      418:      	movk	xzr, #0x400
@@ -271,7 +271,7 @@
      428:      	mov	x29, x2
      42c:      	str	w4, [sp]
      430:      	str	x13, [sp, #0x8]
-     434:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     434:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      438:      	nop
      43c:      	movk	xzr, #0x530
      440:      	movk	xzr, #0x500
@@ -281,7 +281,7 @@
      450:      	str	x13, [sp, #0x8]
      454:      	str	x14, [sp, #0x18]
      458:      	str	w15, [sp, #0x20]
-     45c:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     45c:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      460:      	nop
      464:      	movk	xzr, #0x558
      468:      	movk	xzr, #0x600
@@ -289,7 +289,7 @@
      470:      	mov	x29, x2
      474:      	stp	x13, x14, [sp, #0x8]
      478:      	str	w4, [sp, #0x4]
-     47c:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     47c:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      480:      	nop
      484:      	movk	xzr, #0x578
      488:      	movk	xzr, #0x700
@@ -297,37 +297,37 @@
      490:      	mov	x29, x2
      494:      	stp	x13, x14, [sp, #0x8]
      498:      	str	w4, [sp, #0x4]
-     49c:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     49c:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      4a0:      	nop
      4a4:      	movk	xzr, #0x598
      4a8:      	movk	xzr, #0x800
      4ac:      	mov	w1, #-0xa               ; =-10
-     4b0:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     4b0:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      4b4:      	nop
      4b8:      	movk	xzr, #0x5ac
      4bc:      	movk	xzr, #0x900
      4c0:      	mov	w1, #-0xa               ; =-10
-     4c4:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     4c4:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      4c8:      	nop
      4cc:      	movk	xzr, #0x5c0
      4d0:      	movk	xzr, #0xa00
      4d4:      	mov	w1, #-0xa               ; =-10
-     4d8:      	bl	0xffffffffffb64680 <ltmp0+0xffffffffffb64680>
+     4d8:      	bl	0xffffffffffb64a40 <ltmp0+0xffffffffffb64a40>
      4dc:      	nop
      4e0:      	movk	xzr, #0x5d4
      4e4:      	movk	xzr, #0xb00
      4e8:      	adr	x8, 0x3bc <ltmp0+0x3bc>
      4ec:      	str	x8, [x28, #0x4c0]
-     4f0:      	b	0xffffffffffa8e400 <ltmp0+0xffffffffffa8e400>
+     4f0:      	b	0xffffffffffa8e480 <ltmp0+0xffffffffffa8e480>
      4f4:      	mov	x8, #0xc180             ; =49536
-     4f8:      	movk	x8, #0x1799, lsl #16
+     4f8:      	movk	x8, #0x19ad, lsl #16
      4fc:      	movk	x8, #0x1, lsl #32
      500:      	blr	x8
      504:      	b	0x24 <ltmp0+0x24>
      508:      	udf	#0x1
      50c:      	udf	#0x0
 
-### org.ulpgc.bd.matmul.ParallelMatMul::lambda$ikj$1 (C2, compile id 751, 354 words)
+### org.ulpgc.bd.matmul.ParallelMatMul::lambda$ikj$1 (C2, compile id 888, 354 words)
        0:      	nop
        4:      	sub	x9, sp, #0x14, lsl #12  ; =0x14000
        8:      	str	xzr, [x9]
@@ -594,7 +594,7 @@
      41c:      	str	d23, [sp, #0x40]
      420:      	str	x21, [sp, #0x48]
      424:      	str	w2, [sp, #0x3c]
-     428:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     428:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      42c:      	nop
      430:      	movk	xzr, #0x524
      434:      	movk	xzr, #0x400
@@ -604,7 +604,7 @@
      444:      	str	w2, [sp, #0x4]
      448:      	str	x3, [sp, #0x38]
      44c:      	str	w11, [sp, #0x34]
-     450:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     450:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      454:      	nop
      458:      	movk	xzr, #0x54c
      45c:      	movk	xzr, #0x500
@@ -615,7 +615,7 @@
      470:      	str	w2, [sp, #0x4]
      474:      	stp	x0, x5, [sp, #0x28]
      478:      	str	w11, [sp, #0x38]
-     47c:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     47c:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      480:      	nop
      484:      	movk	xzr, #0x578
      488:      	movk	xzr, #0x600
@@ -626,7 +626,7 @@
      49c:      	str	w2, [sp, #0x4]
      4a0:      	stp	x0, x11, [sp, #0x28]
      4a4:      	str	w2, [sp, #0x38]
-     4a8:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     4a8:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      4ac:      	nop
      4b0:      	movk	xzr, #0x5a4
      4b4:      	movk	xzr, #0x700
@@ -637,7 +637,7 @@
      4c8:      	str	w2, [sp, #0x4]
      4cc:      	stp	x0, x11, [sp, #0x28]
      4d0:      	str	w2, [sp, #0x38]
-     4d4:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     4d4:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      4d8:      	nop
      4dc:      	movk	xzr, #0x5d0
      4e0:      	movk	xzr, #0x800
@@ -649,17 +649,17 @@
      4f8:      	str	x0, [sp, #0x28]
      4fc:      	str	x11, [sp, #0x38]
      500:      	str	w6, [sp, #0x44]
-     504:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     504:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      508:      	nop
      50c:      	movk	xzr, #0x600
      510:      	movk	xzr, #0x900
      514:      	mov	w1, #-0xa               ; =-10
-     518:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     518:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      51c:      	nop
      520:      	movk	xzr, #0x614
      524:      	movk	xzr, #0xa00
      528:      	mov	w1, #-0xa               ; =-10
-     52c:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     52c:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      530:      	nop
      534:      	movk	xzr, #0x628
      538:      	movk	xzr, #0xb00
@@ -668,15 +668,15 @@
      544:      	stp	x3, x4, [sp, #0x8]
      548:      	str	x5, [sp, #0x18]
      54c:      	stp	w11, w2, [sp, #0x20]
-     550:      	bl	0xffffffffffb60d40 <ltmp0+0xffffffffffb60d40>
+     550:      	bl	0xffffffffffb60ec0 <ltmp0+0xffffffffffb60ec0>
      554:      	nop
      558:      	movk	xzr, #0x64c
      55c:      	movk	xzr, #0xc00
      560:      	adr	x8, 0x3f0 <ltmp0+0x3f0>
      564:      	str	x8, [x28, #0x4c0]
-     568:      	b	0xffffffffffa8aac0 <ltmp0+0xffffffffffa8aac0>
+     568:      	b	0xffffffffffa8a900 <ltmp0+0xffffffffffa8a900>
      56c:      	mov	x8, #0xc180             ; =49536
-     570:      	movk	x8, #0x1799, lsl #16
+     570:      	movk	x8, #0x19ad, lsl #16
      574:      	movk	x8, #0x1, lsl #32
      578:      	blr	x8
      57c:      	b	0x24 <ltmp0+0x24>
