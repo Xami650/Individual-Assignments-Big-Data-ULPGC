@@ -76,7 +76,8 @@ TIME_PATTERNS = {
     "instructions_retired": re.compile(r"^\s*(\d+)\s+instructions retired", re.M),
     "cycles_elapsed": re.compile(r"^\s*(\d+)\s+cycles elapsed", re.M),
 }
-TIMES = re.compile(r"([\d.]+) real\s+([\d.]+) user\s+([\d.]+) sys")
+# /usr/bin/time writes these with the decimal separator of the locale (a comma under es_ES, for example)
+TIMES = re.compile(r"(\d+[.,]\d+) real\s+(\d+[.,]\d+) user\s+(\d+[.,]\d+) sys")
 OUT_OF_MEMORY_EXIT = 3
 
 
@@ -201,7 +202,8 @@ def busy_cpu_seconds():
 def parse_time_output(stderr):
     values = {key: (int(m.group(1)) if (m := pattern.search(stderr)) else "") for key, pattern in TIME_PATTERNS.items()}
     if m := TIMES.search(stderr):
-        values.update(process_wall_s=m.group(1), process_user_s=m.group(2), process_sys_s=m.group(3))
+        wall, user, system = (g.replace(",", ".") for g in m.groups())
+        values.update(process_wall_s=wall, process_user_s=user, process_sys_s=system)
     return values
 
 
