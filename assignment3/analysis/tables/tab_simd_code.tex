@@ -1,0 +1,12 @@
+\begin{tabular}{llcrrrrrr}
+\toprule
+run & compiled method & SuperWord & fmul.2d & fadd.2d & fmul & fadd & fused & q ld/st \\
+\midrule
+ikj & \texttt{DenseMatMul::ikj} & on & 8 & 8 & 2 & 2 & 0 & 16/24 \\
+ikj & \texttt{DenseMatMul::ikj} & off & 0 & 0 & 10 & 10 & 0 & 0/0 \\
+par\_ikj & \texttt{ParallelMatMul::ikjRow} & on & 8 & 8 & 2 & 2 & 0 & 16/24 \\
+par\_ikj & \texttt{ParallelMatMul::lambda\$ikj\$1} & on & 8 & 8 & 2 & 2 & 0 & 16/24 \\
+par\_ikj & \texttt{ParallelMatMul::ikjRow} & off & 0 & 0 & 10 & 10 & 0 & 0/0 \\
+par\_ikj & \texttt{ParallelMatMul::lambda\$ikj\$1} & off & 0 & 0 & 10 & 10 & 0 & 0/0 \\
+\bottomrule
+\end{tabular}

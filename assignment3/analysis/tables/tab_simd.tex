@@ -1,0 +1,15 @@
+\begin{tabular}{rlrrrrrrr}
+\toprule
+ & & \multicolumn{3}{c}{time per multiplication} & \multicolumn{2}{c}{instr./mult.-add} & \multicolumn{2}{c}{cycles/mult.-add} \\ \cmidrule(lr){3-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9} $n$ & configuration & on (ms) & off (ms) & off/on & on & off & on & off \\
+\midrule
+512 & ikj (seq.) & 17.4 & 25.5 & 1.46 & 3.21 & 5.90 & 0.528 & 0.777 \\
+512 & par\_ikj, $p=4$ & 7.29 & 8.48 & 1.16 & 3.21 & 5.89 & 0.795 & 0.872 \\
+512 & par\_ikj, $p=10$ & 4.38 & 6.01 & 1.37 & 3.52 & 5.89 & 1.01 & 1.36 \\
+1024 & ikj (seq.) & 138 & 208 & 1.51 & 3.04 & 5.83 & 0.522 & 0.785 \\
+1024 & par\_ikj, $p=4$ & 50.5 & 72.2 & 1.43 & 3.04 & 5.82 & 0.659 & 0.929 \\
+1024 & par\_ikj, $p=10$ & 32.4 & 45.3 & 1.40 & 3.45 & 5.82 & 0.903 & 1.27 \\
+2048 & ikj (seq.) & 1\,173 & 1\,754 & 1.50 & 2.96 & 5.79 & 0.553 & 0.820 \\
+2048 & par\_ikj, $p=4$ & 503 & 685 & 1.36 & 2.96 & 5.78 & 0.781 & 1.04 \\
+2048 & par\_ikj, $p=10$ & 329 & 433 & 1.32 & 3.41 & 5.79 & 1.14 & 1.47 \\
+\bottomrule
+\end{tabular}
