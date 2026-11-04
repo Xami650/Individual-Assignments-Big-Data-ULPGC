@@ -9,7 +9,7 @@ build instructions, data, analysis and report.
 |---|---|---|
 | [assignment1](assignment1/) | Basic matrix multiplication in Python, Java and C | submitted (tag `assignment1-v1.0`, [report](assignment1/report/main.pdf)) |
 | [assignment2](assignment2/) | Optimised dense and sparse (CSR) matrix multiplication in Java | submitted (tag `assignment2-v1.0`, [report](assignment2/report/main.pdf)) |
-| assignment3 | — | not started |
+| [assignment3](assignment3/) | Parallel matrix multiplication in Java: thread scaling on P and E cores, and SIMD vectorisation | submitted (tag `assignment3-v1.0`, [report](assignment3/report/main.pdf)) |
 | assignment4 | — | not started |
 
 ## Note on the repository structure
