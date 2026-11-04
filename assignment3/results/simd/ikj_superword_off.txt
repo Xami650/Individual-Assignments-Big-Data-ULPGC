@@ -1,0 +1,292 @@
+# java -Xmx8g -XX:+UnlockDiagnosticVMOptions -XX:CompileCommand=quiet -XX:CompileCommand=print,org.ulpgc.bd.matmul.*::* -XX:-UseSuperWord -jar target/matmul.jar --method ikj --n 512 --a data/inputs/A_512.bin --b data/inputs/B_512.bin --warmup 1 --reps 1 --pre-warm-seconds 1.0 --min-sample-seconds 0.1 --min-warmup-seconds 1.0
+# final C2 code of every method with a floating-point multiply
+
+### org.ulpgc.bd.matmul.DenseMatMul::ikj (C2, compile id 611, 288 words)
+       0:      	nop
+       4:      	sub	x9, sp, #0x14, lsl #12  ; =0x14000
+       8:      	str	xzr, [x9]
+       c:      	sub	sp, sp, #0x60
+      10:      	stp	x29, x30, [sp, #0x50]
+      14:      	ldr	w8, 0x47c <ltmp0+0x47c>
+      18:      	ldr	w9, [x28, #0x20]
+      1c:      	cmp	x8, x9
+      20:      	b.ne	0x468 <ltmp0+0x468>
+      24:      	mov	x6, x1
+      28:      	cmp	w4, #0x0
+      2c:      	b.le	0x354 <ltmp0+0x354>
+      30:      	ldr	w11, [x1, #0xc]
+      34:      	sxtw	x10, w4
+      38:      	sxtw	x12, w11
+      3c:      	sub	x1, x10, #0x1
+      40:      	cbz	w11, 0x428 <ltmp0+0x428>
+      44:      	cmp	x1, x12
+      48:      	b.hs	0x428 <ltmp0+0x428>
+      4c:      	ldr	w12, [x3, #0xc]
+      50:      	sxtw	x11, w12
+      54:      	cbz	w12, 0x428 <ltmp0+0x428>
+      58:      	cmp	x1, x11
+      5c:      	b.hs	0x428 <ltmp0+0x428>
+      60:      	sub	x12, x10, #0x7
+      64:      	mov	x8, #-0x80000000        ; =-2147483648
+      68:      	cmp	x12, x8
+      6c:      	mov	x13, #-0x80000000       ; =-2147483648
+      70:      	csel	x12, x13, x12, lt
+      74:      	mov	w10, #0x3e80            ; =16000
+      78:      	movi	d18, #0000000000000000
+      7c:      	mov	w11, #0x1f40            ; =8000
+      80:      	mov	w13, w12
+      84:      	mov	w17, wzr
+      88:      	b	0xa0 <ltmp0+0xa0>
+      8c:      	ldr	x12, [x28, #0x30]
+      90:      	add	w17, w17, #0x1
+      94:      	ldr	wzr, [x12]
+      98:      	cmp	w17, w4
+      9c:      	b.ge	0x354 <ltmp0+0x354>
+      a0:      	sbfiz	x12, x17, #2, #32
+      a4:      	add	x14, x6, x12
+      a8:      	add	x12, x3, x12
+      ac:      	ldr	w14, [x14, #0x10]
+      b0:      	ldr	w15, [x12, #0x10]
+      b4:      	lsl	x5, x14, #3
+      b8:      	lsl	x0, x15, #3
+      bc:      	ldr	w16, [x0, #0xc]
+      c0:      	cbz	w16, 0x18c <ltmp0+0x18c>
+      c4:      	sub	w12, w16, #0x1
+      c8:      	cmp	w12, w16
+      cc:      	b.hs	0x3f4 <ltmp0+0x3f4>
+      d0:      	sub	w12, w16, #0xf
+      d4:      	str	d18, [x0, #0x10]
+      d8:      	cmp	w12, #0x1
+      dc:      	b.le	0x420 <ltmp0+0x420>
+      e0:      	orr	w15, wzr, #0x1
+      e4:      	sub	w7, w16, w15
+      e8:      	cmp	w12, w15
+      ec:      	sub	w14, w7, #0xf
+      f0:      	csel	w14, wzr, w14, lt
+      f4:      	mov	w8, #0x3e80             ; =16000
+      f8:      	cmp	w14, w8
+      fc:      	csel	w14, w10, w14, hi
+     100:      	add	w7, w14, w15
+     104:      	nop
+     108:      	nop
+     10c:      	nop
+     110:      	add	x14, x0, w15, sxtw #3
+     114:      	str	d18, [x14, #0x10]
+     118:      	str	d18, [x14, #0x18]
+     11c:      	str	d18, [x14, #0x20]
+     120:      	str	d18, [x14, #0x28]
+     124:      	str	d18, [x14, #0x30]
+     128:      	str	d18, [x14, #0x38]
+     12c:      	str	d18, [x14, #0x40]
+     130:      	str	d18, [x14, #0x48]
+     134:      	str	d18, [x14, #0x50]
+     138:      	str	d18, [x14, #0x58]
+     13c:      	str	d18, [x14, #0x60]
+     140:      	str	d18, [x14, #0x68]
+     144:      	str	d18, [x14, #0x70]
+     148:      	str	d18, [x14, #0x78]
+     14c:      	str	d18, [x14, #0x80]
+     150:      	add	w15, w15, #0x10
+     154:      	str	d18, [x14, #0x88]
+     158:      	cmp	w15, w7
+     15c:      	b.lt	0x110 <ltmp0+0x110>
+     160:      	ldr	x14, [x28, #0x30]
+     164:      	ldr	wzr, [x14]
+     168:      	cmp	w15, w12
+     16c:      	b.lt	0xe4 <ltmp0+0xe4>
+     170:      	cmp	w15, w16
+     174:      	b.ge	0x18c <ltmp0+0x18c>
+     178:      	add	x12, x0, w15, sxtw #3
+     17c:      	add	w15, w15, #0x1
+     180:      	str	d18, [x12, #0x10]
+     184:      	cmp	w15, w16
+     188:      	b.lt	0x178 <ltmp0+0x178>
+     18c:      	ldr	w14, [x5, #0xc]
+     190:      	sxtw	x12, w14
+     194:      	cbz	w14, 0x3a4 <ltmp0+0x3a4>
+     198:      	cmp	x1, x12
+     19c:      	b.hs	0x3a4 <ltmp0+0x3a4>
+     1a0:      	ldr	w14, [x2, #0xc]
+     1a4:      	sxtw	x12, w14
+     1a8:      	cbz	w14, 0x3a4 <ltmp0+0x3a4>
+     1ac:      	cmp	x1, x12
+     1b0:      	b.hs	0x3a4 <ltmp0+0x3a4>
+     1b4:      	sxtw	x12, w16
+     1b8:      	cmp	x1, x12
+     1bc:      	b.hs	0x3cc <ltmp0+0x3cc>
+     1c0:      	cbz	w16, 0x3cc <ltmp0+0x3cc>
+     1c4:      	mov	w14, wzr
+     1c8:      	b	0x20c <ltmp0+0x20c>
+     1cc:      	sbfiz	x12, x7, #3, #32
+     1d0:      	add	x15, x16, x12
+     1d4:      	ldr	d16, [x15, #0x10]
+     1d8:      	add	x12, x0, x12
+     1dc:      	ldr	d17, [x12, #0x10]
+     1e0:      	fmul	d16, d16, d19
+     1e4:      	add	w7, w7, #0x1
+     1e8:      	fadd	d16, d16, d17
+     1ec:      	str	d16, [x12, #0x10]
+     1f0:      	cmp	w7, w4
+     1f4:      	b.lt	0x1cc <ltmp0+0x1cc>
+     1f8:      	ldr	x12, [x28, #0x30]
+     1fc:      	add	w14, w14, #0x1
+     200:      	ldr	wzr, [x12]
+     204:      	cmp	w14, w4
+     208:      	b.ge	0x8c <ltmp0+0x8c>
+     20c:      	sxtw	x12, w14
+     210:      	add	x15, x2, x12, uxtx #2
+     214:      	ldr	w15, [x15, #0x10]
+     218:      	add	x12, x5, x12, uxtx #3
+     21c:      	lsl	x16, x15, #3
+     220:      	ldr	d19, [x12, #0x10]
+     224:      	ldr	w15, [x16, #0xc]
+     228:      	sxtw	x12, w15
+     22c:      	cbz	w15, 0x36c <ltmp0+0x36c>
+     230:      	cmp	x1, x12
+     234:      	b.hs	0x36c <ltmp0+0x36c>
+     238:      	ldr	d16, [x16, #0x10]
+     23c:      	ldr	d17, [x0, #0x10]
+     240:      	fmul	d16, d16, d19
+     244:      	fadd	d16, d16, d17
+     248:      	str	d16, [x0, #0x10]
+     24c:      	cmp	w13, #0x1
+     250:      	b.le	0x39c <ltmp0+0x39c>
+     254:      	orr	w7, wzr, #0x1
+     258:      	cmp	w13, w7
+     25c:      	sub	w12, w13, w7
+     260:      	csel	w12, wzr, w12, lt
+     264:      	mov	w8, #0x1f40             ; =8000
+     268:      	cmp	w12, w8
+     26c:      	csel	w12, w11, w12, hi
+     270:      	add	w19, w12, w7
+     274:      	nop
+     278:      	nop
+     27c:      	nop
+     280:      	sbfiz	x12, x7, #3, #32
+     284:      	add	x15, x16, x12
+     288:      	ldr	d16, [x15, #0x10]
+     28c:      	add	x12, x0, x12
+     290:      	ldr	d17, [x12, #0x10]
+     294:      	fmul	d16, d16, d19
+     298:      	fadd	d16, d16, d17
+     29c:      	str	d16, [x12, #0x10]
+     2a0:      	ldr	d16, [x15, #0x18]
+     2a4:      	ldr	d17, [x12, #0x18]
+     2a8:      	fmul	d16, d16, d19
+     2ac:      	fadd	d16, d16, d17
+     2b0:      	str	d16, [x12, #0x18]
+     2b4:      	ldr	d16, [x15, #0x20]
+     2b8:      	ldr	d17, [x12, #0x20]
+     2bc:      	fmul	d16, d16, d19
+     2c0:      	fadd	d16, d16, d17
+     2c4:      	str	d16, [x12, #0x20]
+     2c8:      	ldr	d16, [x15, #0x28]
+     2cc:      	ldr	d17, [x12, #0x28]
+     2d0:      	fmul	d16, d16, d19
+     2d4:      	fadd	d16, d16, d17
+     2d8:      	str	d16, [x12, #0x28]
+     2dc:      	ldr	d16, [x15, #0x30]
+     2e0:      	ldr	d17, [x12, #0x30]
+     2e4:      	fmul	d16, d16, d19
+     2e8:      	fadd	d16, d16, d17
+     2ec:      	str	d16, [x12, #0x30]
+     2f0:      	ldr	d16, [x15, #0x38]
+     2f4:      	ldr	d17, [x12, #0x38]
+     2f8:      	fmul	d16, d16, d19
+     2fc:      	fadd	d16, d16, d17
+     300:      	str	d16, [x12, #0x38]
+     304:      	ldr	d16, [x15, #0x40]
+     308:      	ldr	d17, [x12, #0x40]
+     30c:      	fmul	d16, d16, d19
+     310:      	fadd	d16, d16, d17
+     314:      	str	d16, [x12, #0x40]
+     318:      	ldr	d16, [x15, #0x48]
+     31c:      	ldr	d17, [x12, #0x48]
+     320:      	fmul	d16, d16, d19
+     324:      	add	w7, w7, #0x8
+     328:      	fadd	d16, d16, d17
+     32c:      	str	d16, [x12, #0x48]
+     330:      	cmp	w7, w19
+     334:      	b.lt	0x280 <ltmp0+0x280>
+     338:      	ldr	x12, [x28, #0x30]
+     33c:      	ldr	wzr, [x12]
+     340:      	cmp	w7, w13
+     344:      	b.lt	0x258 <ltmp0+0x258>
+     348:      	cmp	w7, w4
+     34c:      	b.lt	0x1cc <ltmp0+0x1cc>
+     350:      	b	0x1f8 <ltmp0+0x1f8>
+     354:      	ldp	x29, x30, [sp, #0x50]
+     358:      	add	sp, sp, #0x60
+     35c:      	ldr	x8, [x28, #0x28]
+     360:      	cmp	sp, x8
+     364:      	b.hi	0x45c <ltmp0+0x45c>
+     368:      	ret
+     36c:      	mov	w1, #-0x92              ; =-146
+     370:      	mov	x29, x6
+     374:      	stp	x2, x3, [sp]
+     378:      	str	w17, [sp, #0x14]
+     37c:      	stp	x5, x0, [sp, #0x18]
+     380:      	stp	w14, w4, [sp, #0x28]
+     384:      	str	d19, [sp, #0x30]
+     388:      	str	x16, [sp, #0x38]
+     38c:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     390:      	nop
+     394:      	movk	xzr, #0x488
+     398:      	movk	xzr, #0x400
+     39c:      	orr	w7, wzr, #0x1
+     3a0:      	b	0x348 <ltmp0+0x348>
+     3a4:      	mov	w1, #-0x92              ; =-146
+     3a8:      	mov	x29, x6
+     3ac:      	stp	x2, x3, [sp]
+     3b0:      	str	w17, [sp, #0x14]
+     3b4:      	stp	x5, x0, [sp, #0x18]
+     3b8:      	str	w4, [sp, #0x28]
+     3bc:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     3c0:      	nop
+     3c4:      	movk	xzr, #0x4b8
+     3c8:      	movk	xzr, #0x500
+     3cc:      	mov	w1, #-0x42              ; =-66
+     3d0:      	mov	x29, x6
+     3d4:      	stp	x2, x3, [sp]
+     3d8:      	str	w17, [sp, #0x14]
+     3dc:      	stp	x5, x0, [sp, #0x18]
+     3e0:      	str	w4, [sp, #0x28]
+     3e4:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     3e8:      	nop
+     3ec:      	movk	xzr, #0x4e0
+     3f0:      	movk	xzr, #0x600
+     3f4:      	mov	w1, #-0x92              ; =-146
+     3f8:      	mov	x29, x6
+     3fc:      	stp	x2, x3, [sp]
+     400:      	stp	w4, w17, [sp, #0x10]
+     404:      	str	x5, [sp, #0x18]
+     408:      	str	x0, [sp, #0x28]
+     40c:      	str	w16, [sp, #0x34]
+     410:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     414:      	nop
+     418:      	movk	xzr, #0x50c
+     41c:      	movk	xzr, #0x700
+     420:      	orr	w15, wzr, #0x1
+     424:      	b	0x170 <ltmp0+0x170>
+     428:      	mov	w1, #-0x92              ; =-146
+     42c:      	mov	x29, x6
+     430:      	stp	x2, x3, [sp]
+     434:      	str	w4, [sp, #0x14]
+     438:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     43c:      	nop
+     440:      	movk	xzr, #0x534
+     444:      	movk	xzr, #0x800
+     448:      	mov	w1, #-0xa               ; =-10
+     44c:      	bl	0xffffffffffb65480 <ltmp0+0xffffffffffb65480>
+     450:      	nop
+     454:      	movk	xzr, #0x548
+     458:      	movk	xzr, #0x900
+     45c:      	adr	x8, 0x35c <ltmp0+0x35c>
+     460:      	str	x8, [x28, #0x4c0]
+     464:      	b	0xffffffffffa8f200 <ltmp0+0xffffffffffa8f200>
+     468:      	mov	x8, #0x180              ; =384
+     46c:      	movk	x8, #0x1998, lsl #16
+     470:      	movk	x8, #0x1, lsl #32
+     474:      	blr	x8
+     478:      	b	0x24 <ltmp0+0x24>
+     47c:      	udf	#0x0

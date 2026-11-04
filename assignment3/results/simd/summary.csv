@@ -1,0 +1,7 @@
+run,superword,method,compile_id,bytecode_bytes,code_words,vector_fmul,vector_fadd,scalar_fmul,scalar_fadd,fused,q_loads,q_stores
+ikj,on,org.ulpgc.bd.matmul.DenseMatMul::ikj,625,93,318,8,8,2,2,0,16,24
+ikj,off,org.ulpgc.bd.matmul.DenseMatMul::ikj,611,93,288,0,0,10,10,0,0,0
+par_ikj,on,org.ulpgc.bd.matmul.ParallelMatMul::ikjRow,630,78,324,8,8,2,2,0,16,24
+par_ikj,on,org.ulpgc.bd.matmul.ParallelMatMul::lambda$ikj$1,751,33,354,8,8,2,2,0,16,24
+par_ikj,off,org.ulpgc.bd.matmul.ParallelMatMul::ikjRow,622,78,284,0,0,10,10,0,0,0
+par_ikj,off,org.ulpgc.bd.matmul.ParallelMatMul::lambda$ikj$1,747,33,320,0,0,10,10,0,0,0
