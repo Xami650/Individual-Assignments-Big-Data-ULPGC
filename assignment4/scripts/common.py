@@ -72,7 +72,8 @@ def driver_command(config, method, n, a, b, *, warmup, reps, threads=None, sched
                    threads_per_worker=None, cluster=None, base_port=None, member_log=None, ping_rounds=None,
                    pre_warm_seconds=None, min_sample_seconds=None, min_warmup_seconds=None, out=None):
     """Command line (run from ROOT) for one driver process."""
-    cmd = [java(config), *config["build_and_runtime"]["jvm_flags"], "-jar", JAR, "--method", method,
+    cmd = [java(config), f"-Xmx{driver_heap_mib(n)}m", *config["build_and_runtime"]["jvm_flags"], "-jar", JAR,
+           "--method", method,
            "--n", str(n), "--a", relative(a), "--b", relative(b), "--warmup", str(warmup), "--reps", str(reps)]
     optional = (("--threads", threads), ("--schedule", schedule), ("--workers", workers),
                 ("--threads-per-worker", threads_per_worker), ("--cluster", cluster), ("--base-port", base_port),
@@ -83,6 +84,12 @@ def driver_command(config, method, n, a, b, *, warmup, reps, threads=None, sched
         if value is not None:
             cmd += [flag, relative(value) if isinstance(value, Path) else str(value)]
     return cmd
+
+
+def driver_heap_mib(n):
+    """-Xmx of the driver: 1 GiB + 8 x 8n^2 bytes, rounded up to a multiple of 64 MiB."""
+    need = 1024 * MIB + 8 * 8 * n * n
+    return int(math.ceil(need / (64 * MIB)) * 64)
 
 
 def member_heap_mib(n, workers):

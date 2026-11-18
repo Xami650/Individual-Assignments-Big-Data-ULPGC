@@ -56,8 +56,8 @@ mvn -v 2>/dev/null | head -1
 echo "Hazelcast: $(ls target/lib 2>/dev/null | tr '\n' ' ')"
 unzip -p target/matmul.jar META-INF/MANIFEST.MF 2>/dev/null | tr -d '\r' \
   | awk '/^ /{sub(/^ /, ""); line = line $0; next} {if (line != "") print line; line = $0} END {print line}' | grep -E '^(Class-Path|Enable-Native-Access|Add-Opens|Add-Exports)' | sed 's/^/  manifest /'
-echo "JVM flags in effect for the driver's flags (threads, heap, JIT, vectorisation):"
-"$JAVA" -Xmx8g -XX:+PrintFlagsFinal -version 2>/dev/null \
+echo "JVM defaults in effect (threads, JIT, vectorisation; the heap limit is set per run, see config/bench.json):"
+"$JAVA" -XX:+PrintFlagsFinal -version 2>/dev/null \
   | grep -E ' (UseG1GC|MaxHeapSize|InitialHeapSize|G1HeapRegionSize|TieredCompilation|CICompilerCount|UseDynamicNumberOfCompilerThreads|ParallelGCThreads|ConcGCThreads|UseDynamicNumberOfGCThreads|ActiveProcessorCount|UseCompressedOops|UseSuperWord|MaxVectorSize|UseFMA|UseOnStackReplacement|ThreadStackSize) ' \
   | awk '{print "  " $2 " = " $4}'
 

@@ -246,6 +246,7 @@ def main():
     parser.add_argument("--methods", nargs="+", help="only these methods (smoke tests)")
     parser.add_argument("--max-n", type=int, help="only configurations with n <= MAX_N (smoke tests)")
     parser.add_argument("--sizes", type=int, nargs="+", help="only these sizes (pilot runs)")
+    parser.add_argument("--match", help="only configurations whose run id contains this text (pilot runs)")
     parser.add_argument("--reps", type=int, help="override the declared repetitions (smoke tests)")
     parser.add_argument("--max-seconds", type=float, help="override the per-operation limit (to test the timeout path)")
     parser.add_argument("--pause", type=float, help="fixed pause between configurations instead of the cool-down")
@@ -259,7 +260,8 @@ def main():
     cool = measurement["cool_down"]
     runs = [r for r in configurations(config) if r["experiment"] in args.experiments
             and (args.methods is None or r["method"] in args.methods)
-            and (args.max_n is None or r["n"] <= args.max_n) and (args.sizes is None or r["n"] in args.sizes)]
+            and (args.max_n is None or r["n"] <= args.max_n) and (args.sizes is None or r["n"] in args.sizes)
+            and (args.match is None or args.match in run_id(r))]
     if args.dry_run:
         for r in runs:
             heap = f"  member -Xmx{member_heap_mib(r['n'], r['workers'])}m" if r["method"] == "dist" else ""

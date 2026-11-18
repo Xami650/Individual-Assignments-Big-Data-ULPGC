@@ -25,7 +25,7 @@ import org.ulpgc.bd.matmul.ParallelMatMul.Schedule;
  * {@code dist}.
  *
  * <pre>
- *   java -Xmx8g -jar target/matmul.jar --method basic|ikj|par_ikj|dist --n N --a PATH --b PATH
+ *   java -Xmx... -jar target/matmul.jar --method basic|ikj|par_ikj|dist --n N --a PATH --b PATH
  *        [--threads P] [--schedule dynamic|static]                          (par_ikj)
  *        [--workers W] [--threads-per-worker K] [--cluster NAME] [--base-port PORT]
  *        [--member-log PATH] [--ping-rounds R]                              (dist)

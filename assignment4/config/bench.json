@@ -133,10 +133,12 @@
     "D_large": {
       "question": "The largest size within the budgets: n = 8192 (A, B and C take 0.5 GiB each)",
       "sizes": [8192],
-      "configurations": [{"method": "ikj"}, {"method": "par_ikj", "schedule": "static", "threads": 10}, {"method": "dist", "workers": 10, "threads_per_worker": 1}],
+      "configurations": [{"method": "ikj"}, {"method": "par_ikj", "schedule": "static", "threads": 4}, {"method": "par_ikj", "schedule": "static", "threads": 10}, {"method": "dist", "workers": 4, "threads_per_worker": 1}],
       "measured_repetitions": 3,
       "max_seconds_per_operation": 300,
-      "_notes": "Three measured repetitions instead of five because ikj alone takes about 2 minutes per multiplication; the uncertainty is reported as the range of the three. The memory of dist at this size (10 copies of B = 5 GiB plus transients) is the reason for the total footprint budget."
+      "_notes": "Three measured repetitions instead of five because ikj alone takes about 2 minutes per multiplication; the uncertainty is reported as the range of the three. w = 4 members (B replicated 4 times, 2 GiB) instead of the planned w = 10, after the pilot.",
+      "_pilot_w4": "Also after the pilot (results/raw/pilot-2, not reported): with w = 4 and the driver's former fixed -Xmx8g, the driver's peak footprint reached 8.8 GB and the total 19.9 GB, above the budget; the driver heap now follows build_and_runtime.driver_heap.",
+      "_pilot": "Added after the pilot (results/raw/pilot-1, not reported): dist with w = 10 at n = 8192 (10 copies of B = 5 GiB, member -Xmx 2304 MiB each, driver -Xmx 8 GiB) exceeded the machine's memory next to the other applications (about 4 GiB for the IDE): macOS swap grew to 18 GB and the first three samples took 66, 95 and 133 s, so the run was stopped. It is the largest configuration attempted and does not meet the memory budget; it is not part of the reported session."
     }
   },
 
@@ -206,7 +208,7 @@
   "budgets": {
     "max_seconds_per_operation": 120,
     "startup_slack_seconds": 90,
-    "driver_heap": "8 GiB (-Xmx8g)",
+    "driver_heap": "build_and_runtime.driver_heap (1 GiB + 64n^2 bytes; 5 GiB at n = 8192)",
     "max_total_footprint_bytes": 18000000000,
     "max_session_minutes": 150,
     "policy": "As in Assignments 2 and 3. The driver gets startup_slack_seconds to load its inputs, connect and pre-warm, then max_seconds_per_operation (300 s in D_large) for every sample line; the members get member_ready_timeout_seconds to report ready. The harness kills a configuration that misses a deadline, records a timeout with the limit, and skips larger n for the same series. An OutOfMemoryError in the driver (exit status 3) or in a member (ExitOnOutOfMemoryError, exit status 3) is recorded as memory_budget_exceeded; a cluster failure (driver exit status 4) as error. After the run, the sum of the peak memory footprints of the driver and all members is compared with max_total_footprint_bytes (a conservative check: the peaks need not coincide). Timeouts and memory failures are reported as results, never given an invented time."
@@ -225,9 +227,13 @@
   "build_and_runtime": {
     "jdk": "OpenJDK 25.0.1 (Oracle build, HotSpot, tiered JIT, G1 garbage collector), pinned by path in java_home",
     "java_home": "~/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home",
-    "jvm_flags": ["-Xmx8g", "--sun-misc-unsafe-memory-access=allow"],
+    "jvm_flags": ["--sun-misc-unsafe-memory-access=allow"],
+    "driver_heap": {
+      "rule": "-Xmx = 1 GiB + 8 x 8n^2 bytes, rounded up to a multiple of 64 MiB, for every method",
+      "justification": "the driver of dist holds A, B and C (3 x 8n^2), the serialized bands of A and the serialized B (2 x 8n^2) and the gathered bands of C while the previous C becomes garbage; the in-process methods need only 3 x 8n^2 and allocate nothing while timed. Replaces Assignment 3's fixed -Xmx8g after the pilot, where the garbage collector let a dist driver at n = 8192 grow to an 8.8 GB footprint."
+    },
     "manifest": "target/matmul.jar declares Enable-Native-Access (FFM call to proc_pid_rusage), the Add-Exports and Add-Opens that Hazelcast asks for on Java 9+, and Class-Path lib/hazelcast-5.7.0.jar",
     "build": "mvn package (maven.compiler.release 25), with JAVA_HOME set to java_home",
-    "_notes": "The driver uses the Assignment 3 heap limit for every method. --sun-misc-unsafe-memory-access=allow only silences the JDK's warning about Hazelcast's use of sun.misc.Unsafe (the default in JDK 25 is to allow it with a warning). Other JVM settings at their defaults: UseSuperWord = true, MaxVectorSize = 16 (two doubles per vector), G1."
+    "_notes": "--sun-misc-unsafe-memory-access=allow only silences the JDK's warning about Hazelcast's use of sun.misc.Unsafe (the default in JDK 25 is to allow it with a warning). Other JVM settings at their defaults: UseSuperWord = true, MaxVectorSize = 16 (two doubles per vector), G1."
   }
 }
