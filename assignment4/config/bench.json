@@ -1,0 +1,233 @@
+{
+  "_about": "Experimental protocol for Assignment 4, declared before the reported benchmark session. The scripts in ../scripts read this file; it is the single source of truth for methods, inputs, sizes, worker and thread counts, repetitions, budgets, runtime flags and cluster settings.",
+
+  "study": {
+    "research_question": "How does the end-to-end time of a row-band distributed matrix multiplication on a Hazelcast cluster of w = 1 to 10 workers scale with w for n = 256 to 8192, what share of it is setup, data distribution, computation and result collection, and how does it compare with the validated sequential (basic, ikj) and shared-memory parallel (par_ikj) versions using the same cores?",
+    "factor": "number of workers w (Hazelcast members, one JVM process each) and matrix side length n; secondary: how 10 cores are split into w members x k compute threads (D_grain), and work per worker held constant (D_weak)",
+    "outcomes": ["end-to-end time per multiplication and its phases (serialize, scatter A, broadcast B, compute, gather)", "setup time of the cluster and the client (not part of the end-to-end time)", "speedup and efficiency against ikj and against par_ikj with the same number of cores", "bytes moved per phase: exact serialized payload and bytes counted on the client's connections", "per-member compute time, its spread over the members, and the members' share of CPU time on performance cores", "peak resident set size and peak memory footprint of every member and of the driver"],
+    "environment_label": "Local execution: 1 physical machine (Apple M4, 10 cores), w member processes and 1 driver process, all on the same operating system, communicating over TCP on the loopback interface (127.0.0.1). No physical network is involved and all processes share the machine's memory, caches and memory bandwidth.",
+    "hypotheses": [
+      "H1: the distributed product is bitwise identical to ikj for every w and k. Every row of C is computed by the same row kernel (ParallelMatMul.ikjRow from Assignment 3) with the same operations in the same order, and serialization copies doubles exactly.",
+      "H2: setup (starting w member JVMs until the cluster is formed and safe, then starting the client and connecting to every member) takes seconds, grows with w and does not depend on n. In the probe it took 7 to 11 s for w = 2 to 10, most of it inside Hazelcast's start-up, which by default waits 5 s for further join requests (hazelcast.wait.seconds.before.join) before forming the cluster.",
+      "H3: the data moved per multiplication is (w + 2) 8n^2 bytes plus small headers: 8n^2 for the bands of A, w 8n^2 for the w copies of B and 8n^2 for the bands of C. The bytes counted on the client's connections exceed the serialized payload by less than 0.1%. The time of the distribution phases grows linearly with w, because the broadcast of B dominates.",
+      "H4: for n <= 512 one multiplication lasts at most milliseconds, comparable to the fixed costs of the distributed version (serializing on one thread, at least three client-member round trips of about 0.1 ms each, deserializing on the members), so dist is slower than ikj there. The share of communication in the end-to-end time falls roughly as 1/n for fixed w, because the data grow as n^2 and the work per member as n^3 / w.",
+      "H5: the compute phase of dist with w members (k = 1) is at least as slow as par_ikj with p = w threads on the same bands, and clearly slower where one copy of B fits in the 16 MiB L2 cache of the performance cores but w copies do not (n = 1024, B = 8 MiB): the threads of par_ikj share one B, every member reads its own copy. This would show as more cycles per multiply-add on the members than in par_ikj.",
+      "H6: with equal bands and no control over core placement, the slowest member sets the compute phase: members that run on efficiency cores take longer, so the per-member compute times spread out and the speedup gains little or nothing between w = 4 and w = 5 (as for the static schedule of Assignment 3).",
+      "H7: with all 10 cores in use, fewer and larger members are faster end to end (1 x 10 fastest, 10 x 1 slowest), because B is copied and sent once per member and the per-member fixed costs multiply with w.",
+      "H8: the peak memory of a member follows a fixed base plus its stored data and transient copies (at least 8n^2 for B and 16n^2 / w for its bands of A and C), so the memory of the whole cluster grows linearly with w through the replication of B, and the driver holds about 5 x 8n^2 (A, B, C and their serialized forms).",
+      "H9: in weak scaling (n^3 / w constant) the efficiency T(1, 2048) / T(w, n_w) falls with w, because the work per member stays constant while the data moved grow as (w + 2) n_w^2, about as w^(5/3)."
+    ],
+    "_probe": "Phase 0 probe (not part of the reported data, no warm-up protocol): Hazelcast 5.7.0 on JDK 25.0.1 with 2 members and the client on loopback. n = 1024, w = 2: about 108 ms end to end, of which serialization 21 ms, scatter 2 ms, broadcast 4 ms, compute 76 ms (kernel 72 ms per member) and gather 3.5 ms; the empty-task round trip was about 0.1 ms; the payload of the bands of A was 8,392,778 B (8n^2 plus 4,170 B of headers) and the client's connections counted 172 B more. Every band was computed on the member that stored it. With w = 10 the members joined after 7.5 to 11.4 s. It shaped H2 to H4."
+  },
+
+  "terminology": {
+    "physical_machine": "1 (the MacBook Air M4 described under hardware)",
+    "worker": "a Hazelcast member: one separate JVM process that stores data (bands of A, copies of B, bands of C) and runs band tasks; w members per configuration",
+    "process": "every member is one operating-system process; the driver is one more process; w + 1 processes per distributed configuration, plus the benchmark harness (Python), which only launches and monitors them",
+    "compute_threads": "k threads per member compute its band (k = 1: the member's executor thread computes it directly); w x k is the number of compute threads of the cluster",
+    "driver": "the benchmark process: it loads A and B, connects to the cluster as a Hazelcast client (it stores no cluster data and runs no band task), distributes the data, starts the tasks and assembles C",
+    "internal_threads": "every member also runs Hazelcast's own threads (partition operations, network input/output, generic operations, events and others), recorded as operating-system thread counts; they are idle between operations"
+  },
+
+  "methods": {
+    "_common": "Java 25, IEEE-754 binary64 (double), our own code for every multiplication. Matrices are double[][] (an array of row arrays) in every process, so all methods share the storage layout, the inputs and the arithmetic. All code is in src/main/java/org/ulpgc/bd/matmul/.",
+    "basic": {
+      "role": "validated basic sequential version (Assignment 1, i-j-k with a scalar accumulator)",
+      "change": "none: DenseMatMul.basic copied unchanged from Assignment 2 (tag assignment2-v1.0), which took it unchanged from Assignment 1",
+      "sizes": "n <= 2048 only (it took 12.2 s at n = 2048 in Assignment 2, and would take about 2 minutes per multiplication at 4096)",
+      "code": "DenseMatMul.basic"
+    },
+    "ikj": {
+      "role": "sequential baseline for speedups (the sequential counterpart of every parallel and distributed configuration)",
+      "change": "none: DenseMatMul.ikj copied unchanged from Assignment 3 (tag assignment3-v1.0)",
+      "code": "DenseMatMul.ikj"
+    },
+    "par_ikj": {
+      "role": "shared-memory parallel version (Assignment 3): p threads of one process compute the rows of C",
+      "change": "none: ParallelMatMul copied unchanged from Assignment 3 (tag assignment3-v1.0)",
+      "schedules": "static with p = w: the same row bands as dist with w members, so it isolates the cost of distribution; dynamic with p = 4 and p = 10 as the best Assignment 3 configurations",
+      "code": "ParallelMatMul.ikj"
+    },
+    "dist": {
+      "role": "distributed implementation on Hazelcast 5.7.0",
+      "partitioning": "1D row decomposition with B replicated: A is split into w bands of consecutive rows, band t = rows [floor(t n / w), floor((t + 1) n / w)) (the static split of par_ikj); every member needs all of B; C is produced in the same bands",
+      "placement": "band t is assigned to member t (the member started with index t). For each member the driver finds the smallest integer whose Hazelcast partition that member owns and uses it as the partition key of band t (BandKey implements PartitionAware), so band t of A, the copy of B for band t and band t of C are stored on member t, and the task of band t is sent to the member that owns the key (IExecutorService.submitToKeyOwner). Each task checks that the key's partition is owned by its member (column local of the member log).",
+      "storage": "three distributed maps (IMap) with no backup copies (backup-count 0) and the default BINARY in-memory format: matmul-A (band t of A under key t), matmul-B (one copy of the whole of B under key t, one per member) and matmul-C (band t of C). A and B are taken out of their maps by the task (IMap.remove), so they do not accumulate; C stays stored until the next multiplication overwrites it and is cleared at the end of the run.",
+      "phases": {
+        "serialize": "the driver serializes the w bands of A and B once, with Hazelcast's serialization service (IdentifiedDataSerializable, big-endian doubles)",
+        "scatter": "IMap.setAll stores band t of A on member t (one request per member, sent in parallel by the client)",
+        "broadcast": "IMap.setAll stores the same serialized B under the w keys, i.e. once on every member (the driver serializes B once and sends it w times)",
+        "compute": "one BandTask per member: take its band of A and its copy of B from the local maps (deserialize), allocate the C band, run the kernel, serialize the C band and store it in the local map of C; the phase ends when the last task's result has reached the driver",
+        "gather": "IMap.getAll fetches the w bands of C (deserialized by the client); assemble: their rows are placed into C"
+      },
+      "kernel": "BandKernel: ParallelMatMul.ikjRow (the ikj loop body for one row, Assignment 3) for every row of the band; with k > 1 the band is split statically among k threads created when the member started",
+      "code": "DistributedMatMul (driver side), BandTask, BandKernel, RowBand, BandKey, TaskReport, MemberMain, HazelcastSetup"
+    }
+  },
+
+  "inputs": {
+    "reuse": "the Assignment 1 dense generator and files, unchanged (through Assignments 2 and 3); every file of a size used in Assignment 3 is byte-identical to it (same SHA-256). The sizes 2580, 3252 and 8192 are new and generated by the same code.",
+    "generator": "numpy.random.Generator(PCG64(SeedSequence([seed, n])))",
+    "seed": 2026,
+    "distribution": "uniform on [-1.0, 1.0), every entry nonzero",
+    "draw_order": "A first (n*n values, row-major), then B",
+    "file_format": "raw little-endian float64, row-major, no header",
+    "files": "data/inputs/A_<n>.bin and B_<n>.bin",
+    "checksums": "data/checksums.sha256 (SHA-256 of every input file)"
+  },
+
+  "hardware": {
+    "machine": "Apple MacBook Air (M4, 2025), passively cooled (no fan), 24 GiB of unified memory (LPDDR5X, 120 GB/s)",
+    "cores": "Apple M4: 4 performance cores sharing a 16 MiB L2 cache and 6 efficiency cores sharing a 4 MiB L2 cache; 10 physical cores and 10 logical processors (no simultaneous multithreading). Recorded in env.txt by scripts/collect_env.sh.",
+    "affinity": "none set. macOS provides no interface to bind a thread or a process to a core, so the scheduler places the members' and the driver's threads on performance and efficiency cores. The share of CPU time spent on performance cores is measured per process instead (proc_pid_rusage, RUSAGE_INFO_V6).",
+    "network": "loopback only: every connection is TCP on 127.0.0.1 inside one operating system, so 'transfer' means serialization, copies through the kernel's TCP stack and deserialization, not a physical network"
+  },
+
+  "cluster": {
+    "framework": "Hazelcast Platform 5.7.0, open-source edition (com.hazelcast:hazelcast:5.7.0, Apache License 2.0), embedded member started by MemberMain and Java client in the driver",
+    "configuration_code": "src/main/java/org/ulpgc/bd/matmul/HazelcastSetup.java",
+    "members": "one JVM per member, started with java -jar target/matmul.jar member --cluster NAME --index m --members w --threads k --base-port PORT; member m listens on 127.0.0.1:PORT+m",
+    "discovery": "TCP/IP join with the fixed list of the w member addresses; multicast and auto-detection off; a cluster name that is new for every configuration; hazelcast.initial.min.cluster.size = w; all other join settings at their defaults (hazelcast.wait.seconds.before.join = 5)",
+    "base_port_rotation": "configuration i uses base port 5901 + 20 (i mod 10), so a port is reused only after ten configurations (macOS keeps closed connections in TIME_WAIT for 30 s), and members open their server socket with SO_REUSEADDR (NetworkConfig.setReuseAddress); Hazelcast's default 5701 is never used",
+    "partitions": 271,
+    "backups": "backup-count 0 and async-backup-count 0 for the three maps (every entry exists once; no fault tolerance)",
+    "executor": "one Hazelcast executor service 'matmul' with pool size 1 per member (each member receives one band task per multiplication)",
+    "client": "Hazelcast Java client with the default routing (a connection to every member; key-based operations go directly to the owner), reconnection off, invocation timeout 900 s",
+    "disabled": "usage statistics sent to Hazelcast (phone home), metric collection on members and client, the Jet stream-processing engine (off by default in 5.x)",
+    "logging": "java.util.logging at level WARNING for com.hazelcast",
+    "member_jvm_flags": ["-XX:+ExitOnOutOfMemoryError", "--sun-misc-unsafe-memory-access=allow"],
+    "member_heap": {
+      "rule": "-Xmx = 512 MiB + (3 + 4 / w) 8n^2 bytes, rounded up to a multiple of 64 MiB",
+      "justification": "room for one stored and one deserialized copy of B plus a transient third (the next copy arriving while the previous one is garbage), and the stored and deserialized bands of A and C, above a 512 MiB base for Hazelcast and the JVM; set before the session from the memory model, as declared in the plan"
+    },
+    "start_order": "all w members are launched at once; the harness waits until every member has reported 'ready' (cluster of w members formed, partitions assigned, cluster safe, kernel pre-warmed), measures 2 s of idle CPU of the members, then starts the driver; after the driver exits it closes the members' standard input and each member terminates",
+    "member_ready_timeout_seconds": 120,
+    "idle_window_seconds": 2.0,
+    "ping_rounds": 50
+  },
+
+  "experiments": {
+    "D_strong": {
+      "question": "Strong scaling: end-to-end time, phases, speedup and efficiency of dist with w = 1 to 10 members (k = 1) at fixed n, against ikj, basic and par_ikj",
+      "sizes": [256, 512, 1024, 2048, 4096],
+      "workers": [1, 2, 3, 4, 5, 6, 8, 10],
+      "threads_per_worker": 1,
+      "sequential": ["ikj", "basic"],
+      "basic_max_n": 2048,
+      "parallel_static": "par_ikj, static schedule, p = each value of workers",
+      "parallel_dynamic": [4, 10],
+      "_notes": "Sizes as in Assignment 3 from 256 (B = 0.5, 2, 8, 32 and 128 MiB); w = 1 isolates the cost of the framework with no parallelism; w = 4 fills the performance cores, w = 10 all cores."
+    },
+    "D_grain": {
+      "question": "With all 10 cores computing, does it matter how they are grouped into members (w members x k threads)?",
+      "sizes": [2048, 4096],
+      "layouts": [[1, 10], [2, 5], [5, 2], [10, 1]],
+      "_notes": "The 10 x 1 layout is the D_strong configuration with w = 10."
+    },
+    "D_weak": {
+      "question": "Weak scaling with the work per worker held constant: n_w^3 / w = 2048^3 (within 0.1%), n_w = 2048 w^(1/3) rounded to a multiple of w",
+      "points": [[1, 2048], [2, 2580], [4, 3252], [8, 4096]],
+      "references": "ikj and par_ikj (static, p = w) at every n_w",
+      "_notes": "Exact n^3 / w relative to 2048^3: w = 2: -0.037%; w = 4: +0.093%; w = 8: 0. Keeping n per worker fixed would not keep the work fixed (the work of a member is (n / w) n^2 multiply-adds). The points (1, 2048) and (8, 4096) are D_strong configurations."
+    },
+    "D_large": {
+      "question": "The largest size within the budgets: n = 8192 (A, B and C take 0.5 GiB each)",
+      "sizes": [8192],
+      "configurations": [{"method": "ikj"}, {"method": "par_ikj", "schedule": "static", "threads": 10}, {"method": "dist", "workers": 10, "threads_per_worker": 1}],
+      "measured_repetitions": 3,
+      "max_seconds_per_operation": 300,
+      "_notes": "Three measured repetitions instead of five because ikj alone takes about 2 minutes per multiplication; the uncertainty is reported as the range of the three. The memory of dist at this size (10 copies of B = 5 GiB plus transients) is the reason for the total footprint budget."
+    }
+  },
+
+  "session_order": {
+    "rule": "One block per size, in ascending n (256, 512, 1024, 2048, 2580, 3252, 4096, 8192). In D_strong blocks, the block starts with ikj and dist (w = 10) and ends with the same two in reverse order; every other configuration of that n runs in between, in the order given by random.Random(seed + n).shuffle over the declared list.",
+    "seed": 2026,
+    "drift_control": "ikj and dist (w = 10, k = 1) are measured at the start and at the end of each D_strong block (repeat = first, last) in addition to the shuffled w = 10 run. Speedups use the first ikj run of the block; last/first ratios measure the drift of the machine over the block (temperature, background load)."
+  },
+
+  "statistics": {
+    "central": "median of the time per multiplication over the measured samples",
+    "variability": "interquartile range (IQR), also relative to the median; for D_large (3 samples) the range",
+    "speedup": "S = median T_ikj / median T, with T_ikj from the first ikj run of the size block",
+    "speedup_interval": "[Q1_ikj / Q3, Q3_ikj / Q1]",
+    "efficiency": "E = S / c, with c the number of compute threads (w k for dist, p for par_ikj)",
+    "distribution_cost": "T_dist / T_par_ikj(static, p = w) at the same n: the cost of distributing the same bands",
+    "phases": "per configuration, the median over samples of each phase's time per multiplication; the phases are consecutive, separated by the completion of their last operation, so their sum equals the end-to-end time up to the timer calls (checked); they are shown stacked, and setup is shown separately because it is paid once per cluster, not per multiplication",
+    "compute_breakdown": "inside the compute phase: dispatch (time from the start of the phase until a task starts on its member), the task's own timers (read A, read B, allocate, kernel, store C) and the return of the results; overlapping activities of different members are never added: per multiplication the slowest and the mean member are reported",
+    "imbalance": "max / mean of the members' kernel times per multiplication",
+    "weak_efficiency": "E_weak(w) = T(1, 2048) / T(w, n_w) for dist, and likewise for par_ikj"
+  },
+
+  "correctness": {
+    "unit_tests": "JUnit 5: the reused kernels (hand-computed 2x2 and 3x3 products, identity and zero matrices, an exact BigDecimal reference, basic and ikj bitwise equal, par_ikj bitwise against ikj), the band kernel bitwise against ikj for k = 1 to 4, the serialization of bands, keys, tasks and reports, and dist on an embedded cluster (several members in one JVM) bitwise against ikj for n in {1, 2, 3, 7, 33, 64, 65, 100} x w in {1, 2, 3, 4} x k in {1, 2} (w > n included), identity and zero, explicit placement, repeated calls without leftover entries, error propagation from a failing member, and the driver contract",
+    "sizes": [1, 2, 3, 10, 64, 100, 256],
+    "cases": "random (the dense inputs; reference numpy.matmul), A x I (exact answer A) and A x 0 (exact answer 0), as in Assignments 1 to 3",
+    "sequential": ["basic", "ikj"],
+    "par_ikj": [{"schedule": "static", "threads": 4}, {"schedule": "dynamic", "threads": 10}],
+    "dist_layouts": [[1, 1], [2, 1], [3, 1], [4, 2], [10, 1]],
+    "criterion": "|C_ij - R_ij| <= atol + rtol * (|A||B|)_ij for every i, j",
+    "rtol": "2 * gamma_n, with gamma_n = n*u / (1 - n*u) and u = 2^-53",
+    "atol": 0.0,
+    "justification": "As in Assignments 1 to 3: any summation order of an n-term dot product has forward error at most gamma_n (|A||B|)_ij (Higham, 2nd ed., Secs. 3.1 and 3.5), so two correct results differ by at most 2 gamma_n (|A||B|)_ij. H1 additionally expects every configuration of a case to agree bit for bit; scripts/verify.py runs each layout as a real multi-process cluster."
+  },
+
+  "measurement": {
+    "timer_boundary": "End to end, the same for every method: from A and B in the driver's heap (already loaded from file) to C complete in the driver's heap. basic, ikj and par_ikj: the multiplication call (as in Assignment 3). dist: DistributedMatMul.multiply, i.e. serialize, scatter, broadcast, compute, gather and assemble; not included: starting the members, starting the client, connecting and finding the placement (setup, measured separately), loading the inputs, the JIT pre-warm and the checksum of C.",
+    "setup": "measured by the harness from wall-clock instants of the members' and the driver's event lines: cluster formation = from launching the members until the last member reports 'joined' (cluster of w members formed, partitions assigned, cluster safe); client = from launching the driver until it reports 'connected' (JVM start, inputs loaded, client started, a connection to every member, partition table received, placement found). Setup = cluster formation + client. The members' kernel pre-warm and the 2 s idle window happen between the two and are excluded.",
+    "clock": "System.nanoTime() (monotonic). The members' task start and end times are also nanoTime values; on one machine HotSpot reads one system-wide monotonic clock in every process, so they are compared with the driver's to split the compute phase into dispatch, task and return.",
+    "result_consumption": "after each sample the driver prints a checksum of C (sum of all entries), so the computation cannot be eliminated; the checksums are compared across all configurations of a size",
+    "per_sample_counters": "proc_pid_rusage(RUSAGE_INFO_V6) of the driver around each sample (as in Assignment 3); on every member, the same counters around the kernel of each task (member log)",
+    "transfer": "two measurements per phase: the exact size of every serialized value (Hazelcast Data.totalSize, summed over the bands) and the bytes written to and read from all of the client's connections, from the counters of Hazelcast's networking layer (Channel.bytesWritten and bytesRead, read through the client connection's private channel field). Because all traffic stays on the loopback interface, a transfer time includes serialization, copies through the kernel's TCP stack and deserialization; no physical network bandwidth or latency is measured, and none is inferred.",
+    "round_trip": "after the measured samples the driver sends ping_rounds empty tasks to every member in turn and times each round trip",
+    "jvm_activity": "as in Assignment 3, over the measured samples of the driver: garbage collections and GC time, JIT compilation time, heap bytes allocated, and the driver's Java and operating-system thread counts; for every member, Java and operating-system threads when ready and when stopping, and its total garbage collections",
+    "background_cpu": "the harness reads the system-wide busy CPU time (psutil) at the start and the end of each configuration (members included); minus the CPU time of the configuration's own processes (/usr/bin/time of the driver and of every member) it gives the CPU time used by other processes (other_cpu_s). The members' idle CPU is measured over idle_window_seconds before the driver starts.",
+    "process_model": "one fresh driver JVM per configuration; for dist also a fresh cluster of w member JVMs, new cluster name and ports, terminated after the configuration",
+    "cool_down": {
+      "min_seconds": 5,
+      "max_seconds": 90,
+      "factor": 1.0,
+      "rule": "as in Assignment 3: after each configuration the harness pauses for factor x the driver's wall time, at least min_seconds and at most max_seconds (the M4 has no fan)"
+    },
+    "pre_warm": {
+      "seconds": 1.0,
+      "rule": "before any sample the driver runs the method for 1 s on small random inputs (n = min(N, 256), fixed seed); for dist this runs the whole distributed path, so the driver's and the members' code is compiled. Every member also runs its kernel for 1 s on a random 256 x 256 band after the cluster is formed (introduced in Assignment 2: a long first call otherwise stays in OSR and C1-compiled code)."
+    },
+    "warmup_runs": 1,
+    "min_warmup_seconds": 1.0,
+    "warmup_rule": "warmup_runs is a minimum: warm-up samples continue until at least min_warmup_seconds of warm-up work have run. All warm-up samples are kept in the raw data and excluded from the summaries.",
+    "measured_repetitions": 5,
+    "batching": {
+      "min_sample_seconds": 0.1,
+      "rule": "As in Assignments 1 to 3: each sample times k back-to-back multiplications (k recorded; time per multiplication = elapsed / k); the first warm-up uses k = 1 and every later sample k = max(1, ceil(min_sample_seconds / t)), t being the time per multiplication of the latest warm-up. All measured samples of a configuration share the same k; phase times and bytes are summed over the k multiplications and divided by k."
+    }
+  },
+
+  "budgets": {
+    "max_seconds_per_operation": 120,
+    "startup_slack_seconds": 90,
+    "driver_heap": "8 GiB (-Xmx8g)",
+    "max_total_footprint_bytes": 18000000000,
+    "max_session_minutes": 150,
+    "policy": "As in Assignments 2 and 3. The driver gets startup_slack_seconds to load its inputs, connect and pre-warm, then max_seconds_per_operation (300 s in D_large) for every sample line; the members get member_ready_timeout_seconds to report ready. The harness kills a configuration that misses a deadline, records a timeout with the limit, and skips larger n for the same series. An OutOfMemoryError in the driver (exit status 3) or in a member (ExitOnOutOfMemoryError, exit status 3) is recorded as memory_budget_exceeded; a cluster failure (driver exit status 4) as error. After the run, the sum of the peak memory footprints of the driver and all members is compared with max_total_footprint_bytes (a conservative check: the peaks need not coincide). Timeouts and memory failures are reported as results, never given an invented time."
+  },
+
+  "memory": {
+    "metrics": {
+      "peak_rss": "peak resident set size of each process (driver, every member), from /usr/bin/time -l",
+      "peak_footprint": "peak memory footprint of each process, from the same output; unlike RSS it also counts compressed pages",
+      "cluster_total": "sum over the members of their peak footprints",
+      "model": "elements stored per member: 8n^2 (B) + 16n^2 / w (bands of A and C); in the driver 24n^2 (A, B, C) plus 16n^2 of serialized A and B"
+    },
+    "limitations": "Peak RSS and footprint cover whole processes (JVM, Hazelcast, thread stacks, garbage not yet collected) and depend on how the garbage collector sizes each heap; the model counts only matrix elements. They are reported side by side, not as the same quantity. All processes share the machine's 24 GiB, so the experiment shows memory per worker but not the capacity of several machines."
+  },
+
+  "build_and_runtime": {
+    "jdk": "OpenJDK 25.0.1 (Oracle build, HotSpot, tiered JIT, G1 garbage collector), pinned by path in java_home",
+    "java_home": "~/Library/Java/JavaVirtualMachines/openjdk-25.0.1/Contents/Home",
+    "jvm_flags": ["-Xmx8g", "--sun-misc-unsafe-memory-access=allow"],
+    "manifest": "target/matmul.jar declares Enable-Native-Access (FFM call to proc_pid_rusage), the Add-Exports and Add-Opens that Hazelcast asks for on Java 9+, and Class-Path lib/hazelcast-5.7.0.jar",
+    "build": "mvn package (maven.compiler.release 25), with JAVA_HOME set to java_home",
+    "_notes": "The driver uses the Assignment 3 heap limit for every method. --sun-misc-unsafe-memory-access=allow only silences the JDK's warning about Hazelcast's use of sun.misc.Unsafe (the default in JDK 25 is to allow it with a warning). Other JVM settings at their defaults: UseSuperWord = true, MaxVectorSize = 16 (two doubles per vector), G1."
+  }
+}

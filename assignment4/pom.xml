@@ -4,12 +4,98 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.ulpgc</groupId>
-        <artifactId>Indivual_Assigments_BD</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
+    <!-- Standalone build (no parent): Assignment 4 is self-contained. -->
+    <groupId>org.ulpgc</groupId>
+    <artifactId>assignment4-matmul</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
-    <artifactId>assignment4</artifactId>
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <hazelcast.version>5.7.0</hazelcast.version>
+        <junit.version>5.11.4</junit.version>
+    </properties>
 
+    <dependencies>
+        <!-- The distributed computing framework (open-source edition, Apache License 2.0); its only
+             required dependency is the JDK. -->
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>${hazelcast.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Produces target/matmul.jar (driver entry point: Main) and copies the Hazelcast jar to
+             target/lib/, which the manifest's Class-Path references. The cluster members run
+             `java -cp target/matmul.jar org.ulpgc.bd.matmul.MemberMain`; see the README. -->
+        <finalName>matmul</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-runtime-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.ulpgc.bd.matmul.Main</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- ProcessCounters calls proc_pid_rusage through the FFM API (a restricted method). -->
+                            <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                            <!-- Access to JDK internals that Hazelcast asks for on Java 9+ (it warns and falls back
+                                 to slower code otherwise); these manifest entries apply when run with java -jar. -->
+                            <Add-Exports>java.base/jdk.internal.ref</Add-Exports>
+                            <Add-Opens>java.base/java.lang java.base/sun.nio.ch java.management/sun.management jdk.management/com.sun.management.internal</Add-Opens>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- The same JDK access as the jar's manifest gives the benchmark processes. -->
+                    <argLine>--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow
+                        --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.management/sun.management=ALL-UNNAMED
+                        --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED</argLine>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
