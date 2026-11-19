@@ -1,13 +1,13 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.identity;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.ikj;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.random;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.identity;
+import static org.ulpgc.bd.matmul.Matrices.ikj;
+import static org.ulpgc.bd.matmul.Matrices.random;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +20,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.ulpgc.bd.matmul.dist.protocol.TaskReport;
+import org.ulpgc.bd.matmul.kernel.BandKernel;
 
 /**
  * The distributed multiplication on embedded clusters of 1 to 4 members (all

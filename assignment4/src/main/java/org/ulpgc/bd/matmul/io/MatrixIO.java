@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -11,8 +11,9 @@ import java.nio.file.StandardOpenOption;
  * Dense binary matrix files, the Assignment 1 format: n*n little-endian
  * float64 in row-major order, no header; n is given by the caller and checked
  * against the size. The dense part of Assignment 2's MatrixIO (tag
- * assignment2-v1.0), unchanged; copied unchanged from Assignment 3 (tag
- * assignment3-v1.0, assignment3/src/main/java/org/ulpgc/bd/matmul/MatrixIO.java).
+ * assignment2-v1.0), unchanged; copied from Assignment 3 (tag assignment3-v1.0,
+ * assignment3/src/main/java/org/ulpgc/bd/matmul/MatrixIO.java) with only the
+ * package changed.
  */
 public final class MatrixIO {
 

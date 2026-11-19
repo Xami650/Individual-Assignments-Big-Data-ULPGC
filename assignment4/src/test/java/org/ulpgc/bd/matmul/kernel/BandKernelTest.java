@@ -1,10 +1,10 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.kernel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.ikj;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.random;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.ikj;
+import static org.ulpgc.bd.matmul.Matrices.random;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;

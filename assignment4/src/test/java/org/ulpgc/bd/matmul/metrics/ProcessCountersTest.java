@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

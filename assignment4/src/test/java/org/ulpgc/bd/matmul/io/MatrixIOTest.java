@@ -1,13 +1,14 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.io;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.bd.matmul.Matrices;
 import org.junit.jupiter.api.io.TempDir;
 
 class MatrixIOTest {
@@ -17,7 +18,7 @@ class MatrixIOTest {
 
     @Test
     void denseFilesRoundTripAndSizeIsChecked() throws IOException {
-        double[][] m = DenseMatMulTest.random(9, 5);
+        double[][] m = Matrices.random(9, 5);
         m[3][4] = -0.0;
         Path file = dir.resolve("m.bin");
         MatrixIO.writeDense(file, m);

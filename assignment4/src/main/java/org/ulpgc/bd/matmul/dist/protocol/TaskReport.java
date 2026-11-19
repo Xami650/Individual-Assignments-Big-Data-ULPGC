@@ -1,9 +1,10 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist.protocol;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import java.io.IOException;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /**
  * What a {@link BandTask} reports back to the driver: where it ran, its
@@ -18,31 +19,31 @@ import java.io.IOException;
  */
 public final class TaskReport implements IdentifiedDataSerializable {
 
-    int band;
-    int memberIndex;
-    int kernelThreads;
-    int rows;
-    long pid;
+    public int band;
+    public int memberIndex;
+    public int kernelThreads;
+    public int rows;
+    public long pid;
     /** True if the partition of the band's key is owned by the member that ran the task. */
-    boolean local;
-    long readANs;
-    long readBNs;
-    long allocNs;
-    long kernelNs;
-    long storeNs;
-    long taskNs;
-    long startNs;
-    long endNs;
+    public boolean local;
+    public long readANs;
+    public long readBNs;
+    public long allocNs;
+    public long kernelNs;
+    public long storeNs;
+    public long taskNs;
+    public long startNs;
+    public long endNs;
     /** Serialized size of the C band stored by the task. */
-    long cBytes;
-    long taskCpuNs;
-    long cpuNs;
-    long cpuPNs;
-    long instructions;
-    long cycles;
-    long instructionsP;
-    long cyclesP;
-    long contextSwitches;
+    public long cBytes;
+    public long taskCpuNs;
+    public long cpuNs;
+    public long cpuPNs;
+    public long instructions;
+    public long cycles;
+    public long instructionsP;
+    public long cyclesP;
+    public long contextSwitches;
 
     /** For deserialization only. */
     public TaskReport() {

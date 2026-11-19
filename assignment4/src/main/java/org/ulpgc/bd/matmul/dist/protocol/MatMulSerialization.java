@@ -1,7 +1,8 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist.protocol;
 
 import com.hazelcast.nio.serialization.DataSerializableFactory;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import org.ulpgc.bd.matmul.dist.HazelcastSetup;
 
 /**
  * Factory of the classes that travel between the driver and the members. They

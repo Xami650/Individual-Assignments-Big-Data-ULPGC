@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,7 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.ulpgc.bd.matmul.ParallelMatMul.Schedule;
+import org.ulpgc.bd.matmul.kernel.ParallelMatMul.Schedule;
+import org.ulpgc.bd.matmul.dist.HazelcastSetup;
+import org.ulpgc.bd.matmul.dist.TestCluster;
+import org.ulpgc.bd.matmul.io.MatrixIO;
+import org.ulpgc.bd.matmul.kernel.DenseMatMul;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /** The command-line contract of the driver (adapted from Assignment 3's MainTest). */
 class MainTest {
@@ -124,8 +129,8 @@ class MainTest {
 
     private List<String> runDriver(String method, List<String> extra, Map<String, String> meta) throws IOException {
         int n = 12;
-        double[][] a = DenseMatMulTest.random(n, 1);
-        double[][] b = DenseMatMulTest.random(n, 2);
+        double[][] a = Matrices.random(n, 1);
+        double[][] b = Matrices.random(n, 2);
         Path pa = dir.resolve("a.bin");
         Path pb = dir.resolve("b.bin");
         MatrixIO.writeDense(pa, a);
@@ -152,7 +157,7 @@ class MainTest {
             assertTrue(meta.containsKey(key), key);
         }
 
-        double[][] expected = DenseMatMulTest.ikj(a, b);
+        double[][] expected = Matrices.ikj(a, b);
         assertBitwiseEquals(expected, MatrixIO.loadDense(out, n));
         String[] last = csv.get(csv.size() - 1).split(",", -1);
         assertEquals(Main.HEADER.split(",").length, last.length);

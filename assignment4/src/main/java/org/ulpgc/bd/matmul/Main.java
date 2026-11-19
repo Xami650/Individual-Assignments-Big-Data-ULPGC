@@ -15,7 +15,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import org.ulpgc.bd.matmul.ParallelMatMul.Schedule;
+import org.ulpgc.bd.matmul.kernel.ParallelMatMul.Schedule;
+import org.ulpgc.bd.matmul.dist.DistributedMatMul;
+import org.ulpgc.bd.matmul.dist.HazelcastSetup;
+import org.ulpgc.bd.matmul.dist.protocol.BandKey;
+import org.ulpgc.bd.matmul.dist.protocol.TaskReport;
+import org.ulpgc.bd.matmul.io.MatrixIO;
+import org.ulpgc.bd.matmul.kernel.DenseMatMul;
+import org.ulpgc.bd.matmul.kernel.ParallelMatMul;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /**
  * Benchmark driver for Assignment 4, adapted from the Assignment 3 driver (tag

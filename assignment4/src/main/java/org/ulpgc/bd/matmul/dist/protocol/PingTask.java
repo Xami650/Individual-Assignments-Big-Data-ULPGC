@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist.protocol;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;

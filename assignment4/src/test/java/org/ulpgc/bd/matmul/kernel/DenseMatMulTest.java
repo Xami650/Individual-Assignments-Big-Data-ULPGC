@@ -1,61 +1,27 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.kernel;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.identity;
+import static org.ulpgc.bd.matmul.Matrices.ikj;
+import static org.ulpgc.bd.matmul.Matrices.random;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * The sequential methods and helpers shared by the other tests: the ikj tests
- * copied from Assignment 3 (tag assignment3-v1.0), plus basic (Assignment 2).
+ * The sequential methods: the ikj tests copied from Assignment 3 (tag
+ * assignment3-v1.0), plus basic (Assignment 2). The shared helpers are in
+ * {@link org.ulpgc.bd.matmul.Matrices}.
  */
 class DenseMatMulTest {
 
     private static final double U = Math.scalb(1.0, -53);
-
-    static double[][] ikj(double[][] a, double[][] b) {
-        int n = a.length;
-        double[][] c = DenseMatMul.zeros(n);
-        DenseMatMul.ikj(a, b, c, n);
-        return c;
-    }
-
-    static double[][] random(int n, long seed) {
-        Random rng = new Random(seed);
-        double[][] m = new double[n][n];
-        for (double[] row : m) {
-            for (int j = 0; j < n; j++) {
-                row[j] = rng.nextDouble(-1.0, 1.0);
-            }
-        }
-        return m;
-    }
-
-    static double[][] identity(int n) {
-        double[][] m = DenseMatMul.zeros(n);
-        for (int i = 0; i < n; i++) {
-            m[i][i] = 1.0;
-        }
-        return m;
-    }
-
-    /** Exact equality of every entry, including the sign of zeros. */
-    static void assertBitwiseEquals(double[][] expected, double[][] actual) {
-        assertEquals(expected.length, actual.length);
-        for (int i = 0; i < expected.length; i++) {
-            assertEquals(expected[i].length, actual[i].length);
-            for (int j = 0; j < expected[i].length; j++) {
-                assertEquals(Double.doubleToRawLongBits(expected[i][j]), Double.doubleToRawLongBits(actual[i][j]),
-                        "entry (" + i + ", " + j + ")");
-            }
-        }
-    }
 
     @Test
     void handComputed() {

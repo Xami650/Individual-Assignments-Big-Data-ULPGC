@@ -8,6 +8,9 @@ import java.io.PrintStream;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.Random;
+import org.ulpgc.bd.matmul.dist.HazelcastSetup;
+import org.ulpgc.bd.matmul.kernel.BandKernel;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /**
  * One cluster member: a separate JVM process that starts a Hazelcast member,

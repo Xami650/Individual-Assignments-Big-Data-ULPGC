@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.kernel;
 
 import java.util.Arrays;
 

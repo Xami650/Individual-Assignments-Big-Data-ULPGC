@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist.protocol;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
@@ -12,6 +12,9 @@ import com.hazelcast.partition.Partition;
 import com.hazelcast.spi.impl.SerializationServiceSupport;
 import java.io.IOException;
 import java.util.concurrent.Callable;
+import org.ulpgc.bd.matmul.dist.HazelcastSetup;
+import org.ulpgc.bd.matmul.kernel.BandKernel;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /**
  * The computation of band t, sent by the driver to the member that owns the

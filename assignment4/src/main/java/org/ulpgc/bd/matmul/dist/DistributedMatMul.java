@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
@@ -25,6 +25,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import org.ulpgc.bd.matmul.dist.protocol.BandKey;
+import org.ulpgc.bd.matmul.dist.protocol.BandTask;
+import org.ulpgc.bd.matmul.dist.protocol.PingTask;
+import org.ulpgc.bd.matmul.dist.protocol.RowBand;
+import org.ulpgc.bd.matmul.dist.protocol.TaskReport;
+import org.ulpgc.bd.matmul.kernel.ParallelMatMul;
 
 /**
  * Distributed C = A * B on a Hazelcast cluster of w members, driven by a
@@ -231,7 +237,7 @@ public final class DistributedMatMul {
     }
 
     /** Median, quartiles and extremes of the empty-task round trips, pooled over all members. */
-    static String pingSummary(long[][] times) {
+    public static String pingSummary(long[][] times) {
         long[] all = Arrays.stream(times).flatMapToLong(Arrays::stream).sorted().toArray();
         long[] medians = Arrays.stream(times).mapToLong(t -> {
             long[] s = t.clone();

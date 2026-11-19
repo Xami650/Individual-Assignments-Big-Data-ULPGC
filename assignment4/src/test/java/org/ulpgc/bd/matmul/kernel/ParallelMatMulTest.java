@@ -1,17 +1,18 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.kernel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
 
 import java.util.concurrent.RejectedExecutionException;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.bd.matmul.Matrices;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.ulpgc.bd.matmul.ParallelMatMul.Schedule;
+import org.ulpgc.bd.matmul.kernel.ParallelMatMul.Schedule;
 
 class ParallelMatMulTest {
 
@@ -28,9 +29,9 @@ class ParallelMatMulTest {
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 7, 33, 64, 65, 100})
     void bitwiseEqualToSequential(int n) {
-        double[][] a = DenseMatMulTest.random(n, 100 + n);
-        double[][] b = DenseMatMulTest.random(n, 200 + n);
-        double[][] expected = DenseMatMulTest.ikj(a, b);
+        double[][] a = Matrices.random(n, 100 + n);
+        double[][] b = Matrices.random(n, 200 + n);
+        double[][] expected = Matrices.ikj(a, b);
         for (int p : THREADS) {
             try (ParallelMatMul pm = new ParallelMatMul(p)) {
                 for (Schedule schedule : Schedule.values()) {
@@ -46,8 +47,8 @@ class ParallelMatMulTest {
         try (ParallelMatMul pm = new ParallelMatMul(3)) {
             assertBitwiseEquals(new double[][]{{19, 22}, {43, 50}},
                     parallel(pm, new double[][]{{1, 2}, {3, 4}}, new double[][]{{5, 6}, {7, 8}}, schedule));
-            double[][] a = DenseMatMulTest.random(9, 9);
-            assertBitwiseEquals(a, parallel(pm, a, DenseMatMulTest.identity(9), schedule));
+            double[][] a = Matrices.random(9, 9);
+            assertBitwiseEquals(a, parallel(pm, a, Matrices.identity(9), schedule));
             assertBitwiseEquals(DenseMatMul.zeros(9), parallel(pm, a, DenseMatMul.zeros(9), schedule));
         }
     }
@@ -56,10 +57,10 @@ class ParallelMatMulTest {
     @Test
     void repeatedCallsOnOnePoolAreIdentical() {
         int n = 65;
-        double[][] a = DenseMatMulTest.random(n, 1);
-        double[][] b = DenseMatMulTest.random(n, 2);
-        double[][] expected = DenseMatMulTest.ikj(a, b);
-        double[][] c = DenseMatMulTest.random(n, 3);
+        double[][] a = Matrices.random(n, 1);
+        double[][] b = Matrices.random(n, 2);
+        double[][] expected = Matrices.ikj(a, b);
+        double[][] c = Matrices.random(n, 3);
         try (ParallelMatMul pm = new ParallelMatMul(20)) {
             for (int call = 0; call < 200; call++) {
                 for (double[] row : c) {
@@ -92,12 +93,12 @@ class ParallelMatMulTest {
     @ParameterizedTest
     @EnumSource(Schedule.class)
     void exceptionsPropagateAndThePoolStaysUsable(Schedule schedule) {
-        double[][] a = DenseMatMulTest.random(4, 1);
-        double[][] b = DenseMatMulTest.random(4, 2);
+        double[][] a = Matrices.random(4, 1);
+        double[][] b = Matrices.random(4, 2);
         double[][] broken = {a[0], null, a[2], a[3]};
         try (ParallelMatMul pm = new ParallelMatMul(2)) {
             assertThrows(NullPointerException.class, () -> parallel(pm, broken, b, schedule));
-            assertBitwiseEquals(DenseMatMulTest.ikj(a, b), parallel(pm, a, b, schedule));
+            assertBitwiseEquals(Matrices.ikj(a, b), parallel(pm, a, b, schedule));
         }
     }
 
@@ -108,7 +109,7 @@ class ParallelMatMulTest {
         assertEquals(2, pm.threads());
         pm.close();
         assertThrows(RejectedExecutionException.class,
-                () -> parallel(pm, DenseMatMulTest.identity(2), DenseMatMulTest.identity(2), Schedule.DYNAMIC));
+                () -> parallel(pm, Matrices.identity(2), Matrices.identity(2), Schedule.DYNAMIC));
     }
 
     @Test

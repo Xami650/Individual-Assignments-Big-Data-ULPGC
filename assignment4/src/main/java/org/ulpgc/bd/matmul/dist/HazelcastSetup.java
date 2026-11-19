@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConnectionStrategyConfig.ReconnectMode;
@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.ulpgc.bd.matmul.dist.protocol.MatMulSerialization;
+import org.ulpgc.bd.matmul.kernel.BandKernel;
 
 /**
  * The Hazelcast configuration of the cluster members and of the driver's

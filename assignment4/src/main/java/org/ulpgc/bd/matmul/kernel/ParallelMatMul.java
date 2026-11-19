@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.kernel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,9 +14,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Copied unchanged from Assignment 3 (tag assignment3-v1.0,
+ * Copied from Assignment 3 (tag assignment3-v1.0,
  * assignment3/src/main/java/org/ulpgc/bd/matmul/ParallelMatMul.java), where it
- * was validated bitwise against {@code ikj}. Assignment 4 uses it as the
+ * was validated bitwise against {@code ikj}; only the package and the
+ * visibility of {@link #bandStart} (now public, for the distributed driver)
+ * changed. Assignment 4 uses it as the
  * shared-memory parallel baseline ({@code par_ikj}), and the cluster members
  * reuse its row kernel {@link #ikjRow} and band split {@link #bandStart}
  * (see {@link BandKernel}).
@@ -121,7 +123,7 @@ public final class ParallelMatMul implements AutoCloseable {
     }
 
     /** First row of band t when n rows are split into p contiguous bands whose sizes differ by at most one. */
-    static int bandStart(int t, int n, int p) {
+    public static int bandStart(int t, int n, int p) {
         return (int) ((long) t * n / p);
     }
 

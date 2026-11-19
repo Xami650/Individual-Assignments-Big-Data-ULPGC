@@ -1,4 +1,4 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.metrics;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
@@ -14,8 +14,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Copied unchanged from Assignment 3 (tag assignment3-v1.0,
- * assignment3/src/main/java/org/ulpgc/bd/matmul/ProcessCounters.java). In
+ * Copied from Assignment 3 (tag assignment3-v1.0,
+ * assignment3/src/main/java/org/ulpgc/bd/matmul/ProcessCounters.java); only the
+ * package changed, and the class and its methods are public because the driver,
+ * the members and the band tasks live in other packages. In
  * Assignment 4 the driver and every cluster member read their own process.
  *
  * <p>Process-wide CPU time, instructions and cycles, in total and on the
@@ -32,13 +34,13 @@ import java.util.Map;
  * {@code mach_timebase_info}. On other systems the counters are unavailable
  * and {@link #read()} returns null.
  */
-final class ProcessCounters {
+public final class ProcessCounters {
 
     /** Differences or totals of the counters; times in nanoseconds. */
-    record Snapshot(long cpuNs, long cpuPNs, long instructions, long cycles, long instructionsP, long cyclesP,
+    public record Snapshot(long cpuNs, long cpuPNs, long instructions, long cycles, long instructionsP, long cyclesP,
                     long contextSwitches) {
 
-        Snapshot minus(Snapshot o) {
+        public Snapshot minus(Snapshot o) {
             return new Snapshot(cpuNs - o.cpuNs, cpuPNs - o.cpuPNs, instructions - o.instructions, cycles - o.cycles,
                     instructionsP - o.instructionsP, cyclesP - o.cyclesP, contextSwitches - o.contextSwitches);
         }
@@ -108,12 +110,12 @@ final class ProcessCounters {
         return 16 + 8L * index;
     }
 
-    static synchronized boolean available() {
+    public static synchronized boolean available() {
         return RUSAGE != null && fill();
     }
 
     /** Current totals of the process, or null if the counters are unavailable. */
-    static synchronized Snapshot read() {
+    public static synchronized Snapshot read() {
         if (RUSAGE == null || !fill() || !fillTaskInfo()) {
             return null;
         }
@@ -125,12 +127,12 @@ final class ProcessCounters {
     }
 
     /** Number of threads of the process as the operating system sees them (JVM-internal threads included), or -1. */
-    static synchronized int osThreads() {
+    public static synchronized int osThreads() {
         return RUSAGE != null && fillTaskInfo() ? TASKINFO.get(JAVA_INT, THREAD_COUNT) : -1;
     }
 
     /** CPU time of the process per QoS class in nanoseconds (empty if unavailable). */
-    static synchronized Map<String, Long> qosCpuNs() {
+    public static synchronized Map<String, Long> qosCpuNs() {
         Map<String, Long> qos = new LinkedHashMap<>();
         if (RUSAGE != null && fill()) {
             for (int q = 0; q < QOS_CLASSES.length; q++) {

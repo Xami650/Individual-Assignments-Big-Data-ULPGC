@@ -1,11 +1,11 @@
-package org.ulpgc.bd.matmul;
+package org.ulpgc.bd.matmul.dist.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.assertBitwiseEquals;
-import static org.ulpgc.bd.matmul.DenseMatMulTest.random;
+import static org.ulpgc.bd.matmul.Matrices.assertBitwiseEquals;
+import static org.ulpgc.bd.matmul.Matrices.random;
 
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -14,6 +14,7 @@ import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.ulpgc.bd.matmul.metrics.ProcessCounters;
 
 /** Round trips of the classes that travel between the driver and the members, with Hazelcast's serializer. */
 class SerializationTest {

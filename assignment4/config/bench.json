@@ -30,7 +30,7 @@
   },
 
   "methods": {
-    "_common": "Java 25, IEEE-754 binary64 (double), our own code for every multiplication. Matrices are double[][] (an array of row arrays) in every process, so all methods share the storage layout, the inputs and the arithmetic. All code is in src/main/java/org/ulpgc/bd/matmul/.",
+    "_common": "Java 25, IEEE-754 binary64 (double), our own code for every multiplication. Matrices are double[][] (an array of row arrays) in every process, so all methods share the storage layout, the inputs and the arithmetic. All code is under src/main/java/org/ulpgc/bd/matmul/.",
     "basic": {
       "role": "validated basic sequential version (Assignment 1, i-j-k with a scalar accumulator)",
       "change": "none: DenseMatMul.basic copied unchanged from Assignment 2 (tag assignment2-v1.0), which took it unchanged from Assignment 1",
@@ -85,7 +85,7 @@
 
   "cluster": {
     "framework": "Hazelcast Platform 5.7.0, open-source edition (com.hazelcast:hazelcast:5.7.0, Apache License 2.0), embedded member started by MemberMain and Java client in the driver",
-    "configuration_code": "src/main/java/org/ulpgc/bd/matmul/HazelcastSetup.java",
+    "configuration_code": "src/main/java/org/ulpgc/bd/matmul/dist/HazelcastSetup.java",
     "members": "one JVM per member, started with java -jar target/matmul.jar member --cluster NAME --index m --members w --threads k --base-port PORT; member m listens on 127.0.0.1:PORT+m",
     "discovery": "TCP/IP join with the fixed list of the w member addresses; multicast and auto-detection off; a cluster name that is new for every configuration; hazelcast.initial.min.cluster.size = w; all other join settings at their defaults (hazelcast.wait.seconds.before.join = 5)",
     "base_port_rotation": "configuration i uses base port 5901 + 20 (i mod 10), so a port is reused only after ten configurations (macOS keeps closed connections in TIME_WAIT for 30 s), and members open their server socket with SO_REUSEADDR (NetworkConfig.setReuseAddress); Hazelcast's default 5701 is never used",
