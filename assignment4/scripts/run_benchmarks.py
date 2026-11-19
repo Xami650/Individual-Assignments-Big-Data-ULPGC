@@ -29,6 +29,12 @@ A session writes, under results/raw/<session>/:
 Rows are appended as soon as they are known, so an interrupted session keeps
 everything measured so far.
 
+A tracked session (not smoke* or pilot*) refuses to start on battery power or
+in Low Power Mode, and stops at the first configuration during which the Mac
+slept: time.monotonic() (mach_absolute_time) does not advance while the system
+sleeps and the wall clock does, so a gap between the two marks the run
+"slept" (status), and nothing measured across a sleep is kept as a result.
+
 Usage (from assignment4/):
     python3 scripts/run_benchmarks.py                                     # full protocol
     python3 scripts/run_benchmarks.py --max-n 256 --reps 2 --pause 0 --session smoke
@@ -233,6 +239,19 @@ def busy_cpu_seconds():
     return t.user + t.nice + t.system
 
 
+def on_ac_power():
+    """True when the Mac draws from AC power and Low Power Mode is off."""
+    batt = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
+    settings = subprocess.run(["pmset", "-g"], capture_output=True, text=True).stdout
+    low_power = any(line.split()[:2] == ["lowpowermode", "1"] for line in settings.splitlines())
+    return "AC Power" in batt and not low_power
+
+
+def sleep_gap():
+    """Wall-clock minus monotonic seconds; it grows by the time the system spends asleep."""
+    return time.time() - time.monotonic()
+
+
 def number(value):
     try:
         return float(value)
@@ -253,6 +272,8 @@ def main():
     parser.add_argument("--session", help="session name (default: timestamp; smoke* and pilot* sessions are not tracked)")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--dry-run", action="store_true", help="print the configurations in run order and exit")
+    parser.add_argument("--allow-battery", action="store_true",
+                        help="run a tracked session on battery power or in Low Power Mode (not for real sessions)")
     args = parser.parse_args()
 
     config = load_config()
@@ -273,6 +294,10 @@ def main():
         sys.exit(f"missing inputs (run scripts/gen_inputs.py): {missing[:4]}")
 
     session = args.session or datetime.now().strftime("%Y%m%d-%H%M%S")
+    tracked = not session.startswith(("smoke", "pilot"))
+    if tracked and not args.allow_battery and not on_ac_power():
+        sys.exit("not on AC power or Low Power Mode is on: plug the Mac in (and keep the lid open) "
+                 "before a tracked session")
     out_dir = ROOT / "results" / "raw" / session
     out_dir.mkdir(parents=True, exist_ok=False)
     if not args.skip_build:
@@ -295,7 +320,7 @@ def main():
     stopped = {}  # series -> reason for skipping larger n
     session_start = time.monotonic()
     session_limit = budget["max_session_minutes"] * 60
-    dist_index = 0
+    dist_index, aborted = 0, False
     print(f"session {session}: {len(runs)} configurations")
 
     for run in runs:
@@ -315,7 +340,7 @@ def main():
         print(f"{rid:40s}", end="", flush=True)
         extra = {}
         cluster, member_log, idle = None, None, []
-        cpu_before, window_start = busy_cpu_seconds(), time.monotonic()
+        cpu_before, window_start, gap_before = busy_cpu_seconds(), time.monotonic(), sleep_gap()
         status, detail = "ok", ""
         if dist:
             base_port = 5901 + 20 * (dist_index % 10)
@@ -423,6 +448,9 @@ def main():
         if status == "ok" and footprint_total > budget["max_total_footprint_bytes"]:
             status, detail = "memory_budget_exceeded", \
                 f"total peak footprint {footprint_total} B > {budget['max_total_footprint_bytes']} B"
+        slept = sleep_gap() - gap_before
+        if slept > measurement["max_sleep_gap_seconds"]:
+            status, detail = "slept", f"the system slept for about {slept:.0f} s during this configuration"
         if status != "ok":
             stopped[series(run)] = f"{status} at n={run['n']}"
         runs_log.write({**base, **resources, **{k: meta.get(k, "") for k in META_FIELDS}, **extra,
@@ -437,6 +465,10 @@ def main():
         setup_text = f", setup {extra['setup_s']} s" if "setup_s" in extra else ""
         print(f"  -> {status}, footprint {foot_text}, others {other_text}{setup_text}"
               f"{', ' + detail if detail else ''}")
+        if status == "slept" and tracked:
+            print(f"session stopped: the system slept during {rid}; start a new session", file=sys.stderr)
+            aborted = True
+            break
         busy = number(resources.get("process_wall_s")) or window
         pause = args.pause if args.pause is not None else min(cool["max_seconds"],
                                                                 max(cool["min_seconds"], cool["factor"] * busy))
@@ -447,8 +479,8 @@ def main():
     with open(out_dir / "env.txt", "a") as f:
         f.write("\n## After the session\n" + after.stdout)
     minutes = (time.monotonic() - session_start) / 60
-    print(f"session {session} finished in {minutes:.1f} min -> {out_dir.relative_to(ROOT)}")
-    return 0
+    print(f"session {session} {'stopped' if aborted else 'finished'} in {minutes:.1f} min -> {out_dir.relative_to(ROOT)}")
+    return 1 if aborted else 0
 
 
 if __name__ == "__main__":

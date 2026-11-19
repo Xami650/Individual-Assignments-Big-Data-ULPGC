@@ -191,6 +191,8 @@
       "factor": 1.0,
       "rule": "as in Assignment 3: after each configuration the harness pauses for factor x the driver's wall time, at least min_seconds and at most max_seconds (the M4 has no fan)"
     },
+    "max_sleep_gap_seconds": 2,
+    "power_and_sleep": "a tracked session refuses to start on battery power or in Low Power Mode (the Mac must stay plugged in with the lid open). Around each configuration the harness compares the wall clock with time.monotonic(), which does not advance while macOS sleeps; if they drift apart by more than max_sleep_gap_seconds the configuration is recorded with status slept and the session stops, because nothing timed across a sleep is a valid measurement. Added after a first session (20261118-074820, discarded) ran on battery with the lid closed and only progressed during dark wakes.",
     "pre_warm": {
       "seconds": 1.0,
       "rule": "before any sample the driver runs the method for 1 s on small random inputs (n = min(N, 256), fixed seed); for dist this runs the whole distributed path, so the driver's and the members' code is compiled. Every member also runs its kernel for 1 s on a random 256 x 256 band after the cluster is formed (introduced in Assignment 2: a long first call otherwise stays in OSR and C1-compiled code)."
