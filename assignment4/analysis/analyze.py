@@ -311,7 +311,7 @@ def tables(s, config, members):
     shown = s[(s.experiment == "D_strong") & (s.status == "ok") & (s.repeat.isin(["", "first"]))]
     rows += ["midrule", ["largest IQR"] + [f"{100 * shown[shown.n == n].iqr_rel.max():.1f}\\%" for n in sizes]]
     write_table("tab_time.tex", ["configuration"] + head_n, rows, "l" + "r" * len(sizes),
-                "Median of 5 measured samples, in ms per multiplication, end to end (Sec.~3.4). "
+                "Median of 5 measured samples, in ms per multiplication, end to end (Sec.~\\ref{sec:timing}). "
                 "basic was run up to $n=2048$ only.")
 
     rows = []
@@ -491,8 +491,11 @@ def tables(s, config, members):
         rows.append([label, r.status.replace("_", " "), time_cell(r), rng, sig(get(r, "speedup")) if ok(r) else "--",
                      sig(get(r, "dist_cost")) if ok(r) else "--", sig(r.total_footprint_bytes / GIB),
                      str(r.detail).replace("_", r"\_") if isinstance(r.detail, str) and r.status != "ok" else ""])
-    write_table("tab_large.tex", ["configuration", "status", "median (ms)", "range (ms)", "$S$", "dist/par",
-                                  "footprint (GiB)", "detail"], rows, "llrrrrrp{4.2cm}",
+    header = ["configuration", "status", "median (ms)", "range (ms)", "$S$", "dist/par", "footprint (GiB)", "detail"]
+    spec = "llrrrrrp{4.2cm}"
+    if not any(row[-1] for row in rows):  # no failure to explain: drop the empty detail column
+        header, spec, rows = header[:-1], spec[:-len("p{4.2cm}")], [row[:-1] for row in rows]
+    write_table("tab_large.tex", header, rows, spec,
                 "Three measured samples (range instead of IQR). footprint: peak memory footprint of the driver plus "
                 "all members.")
 
