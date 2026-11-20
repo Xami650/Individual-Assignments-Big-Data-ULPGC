@@ -84,7 +84,8 @@ RUN_FIELDS = ["session", "run_id", *KEYS, "compute_threads", "status", "warmup_r
               "base_port", "member_heap_mib", "setup_cluster_s", "members_ready_s", "setup_client_s", "setup_s",
               "members_idle_cpu_s", "members_max_rss_bytes", "members_rss_sum_bytes", "members_footprint_sum_bytes",
               "members_footprint_max_bytes", "members_user_s", "members_sys_s", "total_footprint_bytes", "window_s",
-              "system_busy_cpu_s", "own_cpu_s", "other_cpu_s", "started_at", "detail", "command"]
+              "system_busy_cpu_s", "own_cpu_s", "other_cpu_s", "quiet_wait_s", "quiet_cores", "started_at",
+              "detail", "command"]
 MEMBER_FIELDS = ["session", "run_id", *KEYS, "member", "pid", "exit_status", "killed", "heap_mib", "hz_start_ms",
                  "cluster_wait_ms", "joined_s", "ready_s", "partitions_owned", "pre_warm_ns", "jvm_threads_ready",
                  "os_threads_ready", "jvm_threads_stopping", "os_threads_stopping", "gc_collections", "gc_ms",
@@ -239,6 +240,20 @@ def busy_cpu_seconds():
     return t.user + t.nice + t.system
 
 
+def wait_until_quiet(gate):
+    """Wait until the system-wide busy CPU over one window is below the threshold; returns (waited s, cores, quiet)."""
+    start = time.monotonic()
+    while True:
+        before = busy_cpu_seconds()
+        time.sleep(gate["window_seconds"])
+        cores = (busy_cpu_seconds() - before) / gate["window_seconds"]
+        waited = time.monotonic() - start
+        if cores < gate["threshold_cores"]:
+            return waited, cores, True
+        if waited >= gate["max_wait_seconds"]:
+            return waited, cores, False
+
+
 def on_ac_power():
     """True when the Mac draws from AC power and Low Power Mode is off."""
     batt = subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout
@@ -336,12 +351,14 @@ def main():
             continue
 
         dist = run["method"] == "dist"
+        quiet_wait, quiet_cores, quiet = wait_until_quiet(measurement["quiet_gate"])
         started = datetime.now().isoformat(timespec="seconds")
         print(f"{rid:40s}", end="", flush=True)
         extra = {}
         cluster, member_log, idle = None, None, []
         cpu_before, window_start, gap_before = busy_cpu_seconds(), time.monotonic(), sleep_gap()
         status, detail = "ok", ""
+        quiet_note = "" if quiet else f"machine not quiet after {quiet_wait:.0f} s ({quiet_cores:.2f} cores busy)"
         if dist:
             base_port = 5901 + 20 * (dist_index % 10)
             name = f"a4-{session}-{dist_index}"
@@ -459,7 +476,9 @@ def main():
                         "total_footprint_bytes": footprint_total or "", "window_s": f"{window:.2f}",
                         "system_busy_cpu_s": f"{system_busy:.2f}", "own_cpu_s": f"{own:.2f}",
                         "other_cpu_s": f"{other:.2f}" if other is not None else "",
-                        "started_at": started, "detail": detail, "command": " ".join(cmd)})
+                        "quiet_wait_s": f"{quiet_wait:.1f}", "quiet_cores": f"{quiet_cores:.2f}",
+                        "started_at": started, "detail": "; ".join(t for t in (detail, quiet_note) if t),
+                        "command": " ".join(cmd)})
         foot_text = f"{footprint_total / 2**30:.2f} GiB" if footprint_total else "n/a"
         other_text = f"{other / window:.2f} cores" if other is not None else "n/a"
         setup_text = f", setup {extra['setup_s']} s" if "setup_s" in extra else ""

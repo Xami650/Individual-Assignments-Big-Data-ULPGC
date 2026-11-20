@@ -191,6 +191,12 @@
       "factor": 1.0,
       "rule": "as in Assignment 3: after each configuration the harness pauses for factor x the driver's wall time, at least min_seconds and at most max_seconds (the M4 has no fan)"
     },
+    "quiet_gate": {
+      "threshold_cores": 0.3,
+      "window_seconds": 5,
+      "max_wait_seconds": 900,
+      "rule": "after the cool-down and before every configuration the harness measures the system-wide busy CPU (psutil) over consecutive windows of window_seconds, while none of the session's processes runs, and starts the configuration at the first window below threshold_cores; it records the wait (quiet_wait_s) and the busy level of the last window (quiet_cores). If the machine is not quiet within max_wait_seconds the configuration runs anyway and its detail says so. Added after session 20261120-012048 (discarded): it passed the start check, but macOS started Spotlight and Apple Intelligence indexing 2 minutes later, which used 1-3 cores during 106 of its 130 configurations and slowed ikj at n = 2048 by 18 % between its first and last block."
+    },
     "max_sleep_gap_seconds": 2,
     "power_and_sleep": "a tracked session refuses to start on battery power or in Low Power Mode (the Mac must stay plugged in with the lid open). Around each configuration the harness compares the wall clock with time.monotonic(), which does not advance while macOS sleeps; if they drift apart by more than max_sleep_gap_seconds the configuration is recorded with status slept and the session stops, because nothing timed across a sleep is a valid measurement. Added after a first session (20261118-074820, discarded) ran on battery with the lid closed and only progressed during dark wakes.",
     "pre_warm": {
