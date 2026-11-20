@@ -1,0 +1,9 @@
+n,configurations,samples,distinct_values,identical
+256,23,115,1,True
+512,23,115,1,True
+1024,23,115,1,True
+2048,26,130,1,True
+2580,3,15,1,True
+3252,3,15,1,True
+4096,25,125,1,True
+8192,4,12,1,True

@@ -1,0 +1,31 @@
+\begin{tabular}{lrrrrr}
+\toprule
+configuration & $n=256$ & $n=512$ & $n=1024$ & $n=2048$ & $n=4096$ \\
+\midrule
+basic & 8.27 & 77.6 & 1\,013 & 14\,028 & -- \\
+ikj & 2.21 & 17.4 & 140 & 1\,168 & 15\,264 \\
+par\_ikj dyn., $p=4$ & 0.884 & 7.63 & 51.0 & 479 & 4\,784 \\
+par\_ikj dyn., $p=10$ & 0.681 & 4.36 & 33.3 & 320 & 4\,818 \\
+\midrule
+par\_ikj static, $p=1$ & 2.21 & 17.5 & 140 & 1\,153 & 14\,959 \\
+par\_ikj static, $p=2$ & 1.40 & 10.5 & 78.3 & 802 & 8\,596 \\
+par\_ikj static, $p=3$ & 1.06 & 8.39 & 67.6 & 596 & 6\,070 \\
+par\_ikj static, $p=4$ & 0.706 & 6.40 & 53.7 & 486 & 4\,814 \\
+par\_ikj static, $p=5$ & 0.863 & 6.51 & 39.7 & 414 & 5\,713 \\
+par\_ikj static, $p=6$ & 0.724 & 5.45 & 35.5 & 380 & 4\,506 \\
+par\_ikj static, $p=8$ & 0.566 & 4.18 & 30.5 & 326 & 3\,849 \\
+par\_ikj static, $p=10$ & 0.605 & 3.95 & 28.8 & 326 & 4\,830 \\
+\midrule
+dist, $w=1$ & 4.07 & 23.4 & 159 & 2\,001 & 15\,456 \\
+dist, $w=2$ & 2.59 & 14.4 & 90.4 & 1\,005 & 10\,583 \\
+dist, $w=3$ & 2.57 & 12.2 & 95.4 & 977 & 10\,487 \\
+dist, $w=4$ & 2.69 & 11.7 & 109 & 1\,287 & 10\,682 \\
+dist, $w=5$ & 2.90 & 13.4 & 96.5 & 1\,019 & 8\,273 \\
+dist, $w=6$ & 3.28 & 12.1 & 91.8 & 966 & 6\,997 \\
+dist, $w=8$ & 3.97 & 14.2 & 93.8 & 871 & 6\,375 \\
+dist, $w=10$ & 4.19 & 14.8 & 100 & 862 & 6\,196 \\
+\midrule
+largest IQR & 12.3\% & 12.9\% & 17.5\% & 13.8\% & 10.6\% \\
+\bottomrule
+\end{tabular}
+\par\smallskip{\footnotesize Median of 5 measured samples, in ms per multiplication, end to end (Sec.~3.4). basic was run up to $n=2048$ only.}

@@ -1,0 +1,18 @@
+\begin{tabular}{rlrrrrrrrr}
+\toprule
+$n$ & $w \times k$ & time (ms) & $S$ & comm.\ (ms) & compute (ms) & kernel max & max/mean & P (\%) & members (GiB) \\
+\midrule
+2048 & 1 $\times$ 10 & 395 & 2.96 & 79.1 & 314 & 291 & 1.00 & 42 & 0.558 \\
+ & 2 $\times$ 5 & 450 & 2.60 & 72.3 & 381 & 365 & 1.00 & 41 & 0.971 \\
+ & 5 $\times$ 2 & 642 & 1.82 & 75.1 & 565 & 548 & 1.08 & 44 & 2.00 \\
+ & 10 $\times$ 1 & 862 & 1.35 & 93.6 & 784 & 759 & 1.07 & 43 & 3.48 \\
+ & par\_ikj, $p=10$ & 326 & 3.58 &  &  &  &  & 42 &  \\
+\midrule
+4096 & 1 $\times$ 10 & 5\,246 & 2.91 & 245 & 5\,002 & 4\,888 & 1.00 & 41 & 1.47 \\
+ & 2 $\times$ 5 & 5\,674 & 2.69 & 224 & 5\,429 & 5\,350 & 1.02 & 42 & 2.44 \\
+ & 5 $\times$ 2 & 5\,628 & 2.71 & 243 & 5\,407 & 5\,323 & 1.07 & 43 & 4.40 \\
+ & 10 $\times$ 1 & 6\,196 & 2.46 & 304 & 5\,898 & 5\,793 & 1.06 & 43 & 9.51 \\
+ & par\_ikj, $p=10$ & 4\,830 & 3.16 &  &  &  &  & 41 &  \\
+\bottomrule
+\end{tabular}
+\par\smallskip{\footnotesize Ten compute threads grouped into $w$ members of $k$ threads. comm.: serialize, scatter, broadcast and gather; members: sum of the members' peak footprints.}

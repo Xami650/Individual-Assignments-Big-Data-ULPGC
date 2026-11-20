@@ -1,0 +1,11 @@
+\begin{tabular}{rrrrrrrrrr}
+\toprule
+$w$ & $n_w$ & work (\%) & dist (ms) & par (ms) & ikj (ms) & $E_w$ dist & $E_w$ par & comm.\ (\%) & payload (MiB) \\
+\midrule
+1 & 2048 & +0.000 & 2\,001 & 1\,153 & 1\,168 & 1.00 & 1.00 & 3.8 & 96.0 \\
+2 & 2580 & -0.037 & 2\,929 & 1\,266 & 2\,228 & 0.683 & 0.911 & 3.3 & 203 \\
+4 & 3252 & +0.093 & 5\,371 & 2\,397 & 7\,989 & 0.372 & 0.481 & 2.7 & 484 \\
+8 & 4096 & +0.000 & 6\,375 & 3\,849 & 15\,264 & 0.314 & 0.300 & 4.3 & 1\,280 \\
+\bottomrule
+\end{tabular}
+\par\smallskip{\footnotesize Work per worker $n_w^3/w$ relative to $2048^3$. $E_w = T(1, 2048)/T(w, n_w)$; par: par\_ikj static with $p=w$.}
