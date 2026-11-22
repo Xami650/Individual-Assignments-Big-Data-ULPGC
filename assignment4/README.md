@@ -30,7 +30,7 @@ Session `20261120-031850` (130 configurations, all ok; full analysis in
 | ikj (ms) | 2.21 | 17.4 | 140 | 1 168 | 15 264 |
 | best par_ikj static (ms) | 0.566 (p = 8) | 3.95 (p = 10) | 28.8 (p = 10) | 326 (p = 8) | 3 849 (p = 8) |
 | best dist (ms) | 2.57 (w = 3) | 11.7 (w = 4) | 90.4 (w = 2) | 862 (w = 10) | 6 196 (w = 10) |
-| best dist speedup over ikj | 0.86 | 1.49 | 1.54 | 1.36 | 2.46 |
+| best dist speedup over ikj | 0.86 | 1.49 | 1.54 | 1.35 | 2.46 |
 | communication share, w = 10 | 57 % | 52 % | 27 % | 11 % | 4.9 % |
 
 - Every configuration is **bitwise identical** to `ikj`, and the bytes moved
@@ -40,8 +40,9 @@ Session `20261120-031850` (130 configurations, all ok; full analysis in
   compute more slowly than threads because each of the w processes reads its own
   copy of B (up to 2.6× the cycles per multiply-add).
 - Ten cores as one member with ten threads beat ten members of one thread
-  (395 vs 862 ms at n = 2048); weak-scaling efficiency falls to 0.31 at
-  eight members with under 5 % of the time in communication.
+  (395 vs 862 ms at n = 2048). In weak scaling dist stays 1.7 to 2.3× slower
+  than `par_ikj` with under 5 % of its time in communication; the efficiency of
+  both falls to about 0.3 at eight workers on one chip.
 - Forming a cluster takes about 10 s (0.6 s with one member); the memory of the
   cluster grows by about 0.9 GiB per member at n = 4096.
 - Two earlier sessions were discarded (sleep on battery; macOS indexing during

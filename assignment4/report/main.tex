@@ -70,8 +70,9 @@ to 7 times their time. Communication (serialization, transfers and
 deserialization at 2 to 11~GB/s) dominates only for $n\le512$; from $n=1024$ on
 the main cost is that $w$ processes with $w$ private copies of $B$ compute more
 slowly than threads sharing one (up to 2.6 times the cycles per multiply-add),
-which also makes one member of ten threads faster than ten members of one and
-lowers weak-scaling efficiency to 0.31 at eight members. Forming a cluster takes
+which also makes one member of ten threads faster than ten members of one. In
+weak scaling dist stays 1.7 to 2.3 times slower than the threads, whose own
+efficiency also falls, to 0.30 at eight workers on one chip. Forming a cluster takes
 about 10~s, and its memory grows by about 0.9~GiB per member at $n=4096$. The
 same kernel was also found to run at two speeds with identical instructions,
 which depend on memory placement rather than on the matrix size.
@@ -632,11 +633,12 @@ bands. (d) Share of the four communication phases in the time of dist.}
 
 Table~\ref{tab:time} and Figure~\ref{fig:strong} give the end-to-end times.
 dist is never the fastest method. Its best speedups over ikj are 0.86 at
-$n=256$ ($w=3$), 1.49 at $n=512$ ($w=4$), 1.54 at $n=1024$ ($w=2$), 1.36 at
+$n=256$ ($w=3$), 1.49 at $n=512$ ($w=4$), 1.54 at $n=1024$ ($w=2$), 1.35 at
 $n=2048$ ($w=10$) and 2.46 at $n=4096$ ($w=10$). For $n\le1024$ its time
 stops falling after two to four members and then stays flat or rises; at
 $n=2048$ it falls slowly to 862~ms with ten members, and only at $n=4096$ does
-it keep falling clearly up to $w=10$ (15.5~s to 6.2~s). par\_ikj on the
+it fall clearly with ten members: from 15.5~s with one member to 10.5~s with
+two, flat up to four, then down to 6.2~s with ten. par\_ikj on the
 same bands reaches 4.85 at $n=1024$ and 3.97 at $n=4096$ ($p=8$). Distributing
 the same bands costs between 1.03 and 7.0 times the time of par\_ikj
 (Table~\ref{tab:speedup}). Up to $n=2048$ the cost grows with $w$, from 1.1 to
@@ -670,9 +672,10 @@ Figure~\ref{fig:phases} and Tables~\ref{tab:phases512} and~\ref{tab:phases4096}
 split the end-to-end time. At $n=512$ communication (serialize, scatter,
 broadcast and gather) is 22\% of the time with one member and 52\% with ten;
 the broadcast of $B$ grows from 1.2 to 4.7~ms and is the only phase that grows
-with $w$. At $n=4096$ communication is 1.3\% to 4.9\%: serialize (69 to
-98~ms), scatter (26 to 41~ms) and gather (54 to 63~ms) do not depend on $w$,
-the broadcast grows from 25 to 129~ms, and the compute phase is the rest. At
+with $w$. At $n=4096$ communication is 1.3\% to 4.9\%: scatter (41 down to 26~ms)
+and gather (54 to 63~ms) do not grow with $w$, serialize takes 69 to 70~ms up to
+$w=3$ and 87 to 98~ms from $w=4$ on for the same bytes, the broadcast grows
+from 25 to 129~ms, and the compute phase is the rest. At
 $w=10$ the share of communication is 57\%, 52\%, 27\%, 11\% and 4.9\% for
 $n=256$ to 4096 (Figure~\ref{fig:strong}d): it halves with each doubling of
 $n$ from 1024 on, but falls much more slowly below.
@@ -720,9 +723,9 @@ takes 2 to 10~ms at $n=1024$ and 40 to 111~ms at $n=4096$ on the slowest
 member.
 
 The kernels of the members are slower than the same bands in par\_ikj. At
-$n=1024$ the members need 0.50 cycles per multiply-add with one or two members
-and 1.35 to 1.80 with four to ten, against 0.53 to 0.71 for the threads of
-par\_ikj; at $n=4096$, 0.82 to 2.41 against 0.88 to 2.01
+$n=1024$ the members need 0.50 cycles per multiply-add with one or two members,
+0.80 with three and 1.27 to 1.80 with four to ten, against 0.53 to 0.71 for the
+threads of par\_ikj; at $n=4096$, 0.82 to 2.41 against 0.88 to 2.01
 (Figure~\ref{fig:compute}b). The members' share of CPU time on P cores is 100\%
 up to $w=3$ and falls to 43 to 45\% at $w=10$ (about four members' worth of P
 cores), as for threads in Assignment~3. At $n=4096$ a member on E cores is not slower than
@@ -842,7 +845,7 @@ With the ten cores used as $w$ members of $k$ threads, fewer and larger members
 are faster (Table~\ref{tab:grain}, Figure~\ref{fig:grainweak}a). At $n=2048$
 the time grows from 395~ms ($1\times10$) to 450, 642 and 862~ms ($2\times5$,
 $5\times2$, $10\times1$); at $n=4096$ from 5\,246~ms to 5\,674, 5\,628 and
-6\,196~ms. The communication phases change little (72 to 94~ms at $n=2048$, 224
+6\,196~ms ($2\times5$ and $5\times2$ within 1\%). The communication phases change little (72 to 94~ms at $n=2048$, 224
 to 304~ms at $n=4096$); the difference is in the compute phase, 314 to 784~ms at
 $n=2048$. The members' memory grows from 0.56 to 3.48~GiB at $n=2048$ and from
 1.47 to 9.51~GiB at $n=4096$. One member with ten threads is still slower than
@@ -872,7 +875,11 @@ Figure~\ref{fig:grainweak}b), the time of dist grows from 2.0~s with one member
 to 2.9, 5.4 and 6.4~s with two, four and eight, an efficiency of 0.68, 0.37 and
 0.31. par\_ikj falls from 0.91 to 0.48 and 0.30. Communication stays between
 2.7\% and 4.3\% of the time of dist although the payload grows from 96 to
-1\,280~MiB, so the loss of efficiency is in the compute phase. The reference
+1\,280~MiB, so the loss of efficiency is in the compute phase. par\_ikj, with no
+communication and one shared $B$, loses almost as much: on one chip a larger
+$n$ means more traffic to memory, and beyond four workers the E cores join.
+What distribution adds is that dist takes 2.3, 2.2 and 1.7 times as long as
+par\_ikj at $w=2$, 4 and 8. The reference
 $T(1,2048)$ of dist is itself the slow speed of the kernel
 (Section~\ref{sec:compute}); measured against ikj at $n=2048$ (1.17~s) the
 efficiency of dist would be 0.40, 0.22 and 0.18.
@@ -914,14 +921,14 @@ results.
 & Verdict & Evidence \\
 \midrule
 H1 & supported & One checksum per size over all methods and configurations; 189 bitwise checks before the session (Section~\ref{sec:placement}). \\
-H2 & supported & 0.6~s with one member, 9.8 to 11.8~s with two to ten, varying by at most 2~s over sizes (Section~\ref{sec:setup-results}). \\
-H3 & mostly supported & Payload within 0.05\% of $(w+2)\,8n^2$; socket overhead below 0.11\% (below 0.01\% for $n\ge1024$). Distribution time grows with $w$ through the broadcast only, and less than linearly, because the broadcast's rate rises from 5 to 11~GB/s (Section~\ref{sec:transfer}). \\
+H2 & supported & Cluster plus client connection: 0.6~s with one member, 9.8 to 11.8~s with two to ten, varying by at most 2~s over sizes (Section~\ref{sec:setup-results}). \\
+H3 & mostly supported & Payload within 0.05\% of $(w+2)\,8n^2$; socket overhead below 0.11\% (below 0.01\% for $n\ge1024$). Distribution time grows with $w$ through the broadcast only, and less than linearly, because the broadcast's rate rises with $w$ (5.3 to 11~GB/s at $n=4096$) (Section~\ref{sec:transfer}). \\
 H4 & partly supported & dist is slower than ikj at $n=256$ (best 0.86) but not at $n=512$ (up to 1.49). The communication share halves with each doubling of $n$ from 1024 on, but between 256 and 512 it barely moves (57\% to 52\% at $w=10$): per-message costs dominate there, not bytes (Section~\ref{sec:phases}). \\
-H5 & supported for $w\ge3$ & The members need 1.35 to 1.80 cycles per multiply-add at $n=1024$ with four to ten members, against 0.57 to 0.71 for par\_ikj; at $n=1024$ with two members dist computes slightly faster than par\_ikj (Section~\ref{sec:compute}). \\
+H5 & supported for $w\ge3$ & The members need 1.27 to 1.80 cycles per multiply-add at $n=1024$ with four to ten members, against 0.57 to 0.69 for par\_ikj; at $n=1024$ with two members dist computes slightly faster than par\_ikj (Section~\ref{sec:compute}). \\
 H6 & not supported & At $n=4096$ members on E cores are not slower than members on P cores and the imbalance is at most 11\%; dist gains from $w=4$ to 5 at $n=1024$, 2048 and 4096 (Section~\ref{sec:compute}). \\
 H7 & supported, other cause & $1\times10$ fastest and $10\times1$ slowest at both sizes, but communication changes little; the difference is the compute phase (Section~\ref{sec:grain}). \\
 H8 & partly supported & Total memory grows linearly with $w$ (0.9~GiB per member at $n=4096$), but a member's footprint follows its heap limit, not its data (Section~\ref{sec:memory}). \\
-H9 & supported, other cause & Efficiency falls to 0.31 at $w=8$, but communication stays below 5\%; the loss is in the compute phase (Section~\ref{sec:weak}). \\
+H9 & supported, other cause & Efficiency falls to 0.31 at $w=8$, but communication stays below 5\%; the loss is in the compute phase, and par\_ikj loses as much (0.30), so most of it is the shared machine, not distribution (Section~\ref{sec:weak}). \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -935,11 +942,13 @@ second, larger from $n=1024$ on, is that the members compute more slowly than
 threads on the same bands. Each member owns a private copy of $B$: where
 par\_ikj's threads read one $B$ through the shared caches, $w$ members read $w$
 copies, so the traffic between the caches and memory grows with $w$. The cycles
-per multiply-add grow with the number of members accordingly (1.35 to 1.80 at
+per multiply-add grow with the number of members accordingly (1.27 to 1.80 at
 $n=1024$, where one 8~MiB copy fits in the 16~MiB L2 cache of the P cores and
 four do not), while the instructions do not change. The same effect explains
-why fewer, larger members are faster on the same ten cores (H7) and why
-efficiency falls in weak scaling with almost no communication (H9). The core
+why fewer, larger members are faster on the same ten cores (H7) and why dist
+stays 1.7 to 2.3 times slower than par\_ikj in weak scaling with almost no
+communication; the fall of efficiency itself (H9) is shared with par\_ikj and
+comes from running more work on one chip. The core
 type matters less than predicted (H6): at $n=4096$ the members are limited by
 memory, as par\_ikj was in Assignment~3, so a member on an E core keeps up with
 one on a P core.
@@ -1002,8 +1011,8 @@ against 3.6 to 4.9 for par\_ikj; distributing the same bands costs 1.03 to 7 tim
 par\_ikj's time. Communication dominates only for small matrices; from
 $n=1024$ on the main cost is that $w$ processes with $w$ private copies of $B$
 compute more slowly than threads sharing one, which also makes fewer and
-larger members faster and weak-scaling efficiency fall to 0.31 at eight
-members. Starting a cluster takes about 10~s, which only a long-lived cluster
+larger members faster and keeps dist 1.7 to 2.3 times slower than the threads
+in weak scaling. Starting a cluster takes about 10~s, which only a long-lived cluster
 amortises. These are the costs of the framework and of separate processes on a
 shared chip; the cost of a real network, and the benefit of the memory and
 memory bandwidth of more machines, remain to be measured on a real cluster.
@@ -1014,7 +1023,7 @@ memory bandwidth of more machines, remain to be measured on a real cluster.
 
 \paragraph{Reproducibility materials.} All code, data and scripts are in the
 directory \texttt{assignment4/} of the GitHub repository below, at the tag
-\texttt{assignment4-v1.0}:
+\texttt{assignment4-v1.1}:
 \begin{center}\repourl\end{center}
 Its README gives the exact build and run commands and the software versions.
 The materials are:

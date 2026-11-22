@@ -67,5 +67,5 @@ common pages) to where it is met. "§" refers to sections of the report
 | Framework configuration | `HazelcastSetup.java`, `config/bench.json` (`cluster`), README "How the distributed multiplication works" |
 | Raw results, input generation instructions, scripts reproducing the analysis and figures | `results/`, `scripts/gen_inputs.py`, `analysis/analyze.py` |
 | Reused materials identified with their exact version | Assignment 3 at tag `assignment3-v1.0` (§7, README "Reuse") |
-| GitHub repository | https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC (tag `assignment4-v1.0`) |
+| GitHub repository | https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC (tag `assignment4-v1.1`) |
 | Use of generative AI disclosed (tool, purpose, affected parts) | report §7, "Use of generative AI" |
