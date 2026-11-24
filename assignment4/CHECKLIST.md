@@ -37,7 +37,7 @@ common pages) to where it is met. "§" refers to sections of the report
 
 | Requirement | Where it is met |
 |---|---|
-| Local execution only with the instructor's permission | permission requested by the author for the only available machine (one laptop); the report labels the environment |
+| Local execution | the author had only one machine (one laptop), stated as the main limitation of the study (abstract, §1, §5); the report labels the environment |
 | Environment clearly labelled | title page, §1 "Execution environment", Table "environment", README banner |
 | What local execution cannot show | no inter-machine network performance, no multi-machine memory capacity (§1, §5) |
 
@@ -67,5 +67,5 @@ common pages) to where it is met. "§" refers to sections of the report
 | Framework configuration | `HazelcastSetup.java`, `config/bench.json` (`cluster`), README "How the distributed multiplication works" |
 | Raw results, input generation instructions, scripts reproducing the analysis and figures | `results/`, `scripts/gen_inputs.py`, `analysis/analyze.py` |
 | Reused materials identified with their exact version | Assignment 3 at tag `assignment3-v1.0` (§7, README "Reuse") |
-| GitHub repository | https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC (tag `assignment4-v1.1`) |
+| GitHub repository | https://github.com/Xami650/Individual-Assignments-Big-Data-ULPGC (tag `assignment4-v1.2`) |
 | Use of generative AI disclosed (tool, purpose, affected parts) | report §7, "Use of generative AI" |

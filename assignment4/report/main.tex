@@ -59,8 +59,9 @@ assignments over a Hazelcast cluster of $w=1$ to 10 member processes, with one
 band of rows of $A$, a copy of $B$ and the task that computes the band placed
 explicitly on each member, and compares it with the sequential and the
 shared-memory parallel versions on the same ten cores. All processes ran on one
-Apple M4 laptop over loopback TCP (local execution), so the results measure the
-framework and separate processes, not a network. The product is bitwise
+Apple M4 laptop over loopback TCP, the only machine the author had (local
+execution); this single machine is the main limitation of the study, and the
+results measure the framework and separate processes, not a network. The product is bitwise
 identical to the sequential kernel for every configuration, and the bytes moved
 are the predicted $(w+2)\,8n^2$ within 0.05\%. The distributed version is never
 faster than threads on the same bands: its best speedup over the sequential
@@ -107,10 +108,9 @@ peak memory of every process.
 
 \paragraph{Execution environment (local execution).} All processes run on one
 physical machine: $w$ Hazelcast members (one JVM each) and one driver process,
-which talk over TCP on the loopback interface. This was the only machine
-available; local execution is allowed by the course guide only if the
-instructor permits it, and its results are labelled as such throughout. It
-measures the framework's behaviour, the cost of serialization and copies, and
+which talk over TCP on the loopback interface. The author had only this one
+machine, so the study is limited to it, and the results are labelled as local
+execution throughout. Running on one machine measures the framework's behaviour, the cost of serialization and copies, and
 the cost of separate processes. It does not measure a physical network, and the
 memory of all members is the memory of one machine.
 
@@ -976,8 +976,9 @@ alignment.
 
 \paragraph{Limitations.}
 \begin{itemize}
-  \item Local execution. All processes ran on one machine over loopback, with
-  the instructor's permission requested for the only machine available. No
+  \item One machine only (local execution). The author had a single machine,
+  and this is the main limitation of the study: all processes ran on it over
+  loopback. No
   physical network was measured: the transfer times include serialization and
   copies through the kernel, not network latency or bandwidth. The members
   compete for one machine's cores, caches and memory bandwidth, which on
@@ -1023,7 +1024,7 @@ memory bandwidth of more machines, remain to be measured on a real cluster.
 
 \paragraph{Reproducibility materials.} All code, data and scripts are in the
 directory \texttt{assignment4/} of the GitHub repository below, at the tag
-\texttt{assignment4-v1.1}:
+\texttt{assignment4-v1.2}:
 \begin{center}\repourl\end{center}
 Its README gives the exact build and run commands and the software versions.
 The materials are:

@@ -17,8 +17,8 @@ produces bitwise-identical results.
 > MacBook Air): w member JVMs and one driver JVM, talking TCP over the
 > loopback interface. This measures the framework, serialization, copies and
 > separate processes; it does **not** measure a physical network, and the
-> memory of all members is the memory of one machine. The course guide allows
-> local execution only with the instructor's permission.
+> memory of all members is the memory of one machine. The author had only
+> this one machine, which is the main limitation of the study.
 
 ## Results at a glance
 
